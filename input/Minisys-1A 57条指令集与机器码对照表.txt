@@ -1,0 +1,60 @@
+R
+add	000000	rs	rt	rd	00000	100000
+addu	000000	rs	rt	rd	00000	100001
+sub	000000	rs	rt	rd	00000	100010
+subu	000000	rs	rt	rd	00000	100011
+and	000000	rs	rt	rd	00000	100100
+mult	000000	rs	rt	0000000000	011000
+multu	000000	rs	rt	0000000000	011001
+div	000000	rs	rt	0000000000	011010
+divu	000000	rs	rt	0000000000	011011
+mfhi	000000	0000000000	rd	00000	010000
+mflo	000000	0000000000	rd	00000	010010
+mthi	000000	rs	000000000000000	010001
+mtlo	000000	rs	000000000000000	010011
+mfc0	010000	00000	rt	rd	00000000	sel
+mtc0	010000	00100	rt	rd	00000000	sel
+or	000000	rs	rt	rd	00000	100101
+xor	000000	rs	rt	rd	00000	100110
+nor	000000	rs	rt	rd	00000	100111
+slt	000000	rs	rt	rd	00000	101010
+sltu	000000	rs	rt	rd	00000	101011
+sll	000000	00000	rt	rd	shamt	000000
+srl	000000	00000	rt	rd	shamt	000010
+sra	000000	00000	rt	rd	shamt	000011
+sllv	000000	rs	rt	rd	00000	000100
+srlv	000000	rs	rt	rd	00000	000110
+srav	000000	rs	rt	rd	00000	000111
+jr	000000	rs	00000	00000	00000	001000
+jalr	000000	rs	00000	rd	00000	001001
+break	000000	code	001101
+syscall	000000	code	001100
+eret	000000	1000 0000 0000 0000 0000	011000
+I
+addi	001000	rs	rt	immediate
+addiu	001001	rs	rt	immediate
+andi	001100	rs	rt	immediate
+ori	001101	rs	rt	immediate
+xori	001110	rs	rt	immediate
+lui	001111	00000	rt	immediate
+lb	100000	rs	rt	offset
+lbu	100100	rs	rt	offset
+lh	100001	rs	rt	offset
+lhu	100101	rs	rt	offset
+sb	101000	rs	rt	offset
+sh	101001	rs	rt	offset
+lw	100011	rs	rt	offset
+sw	101011	rs	rt	offset
+beq	000100	rs	rt	offset
+bne	000101	rs	rt	offset
+bgez	000001	rs	00001	offset
+bgtz	000111	rs	00000	offset
+blez	000110	rs	00000	offset
+bltz	000001	rs	00000	offset
+bgezal	000001	rs	10001	offset
+bltzal	000001	rs	10000	offset
+slti	001010	rs	rt	immediate
+sltiu	001011	rs	rt	immediate
+J
+j	000010	address
+jal	000011	address
