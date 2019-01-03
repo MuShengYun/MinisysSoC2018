@@ -33,7 +33,7 @@ public class FakeIns {
         }
 
         Vector<Byte> bytes = defines(dataDef);
-        while (bytes.size() < nextSize)
+        while (nextSize != null && bytes.size() < nextSize)
             bytes.add((byte) 0);
         nextSize = null;
         return bytes;
