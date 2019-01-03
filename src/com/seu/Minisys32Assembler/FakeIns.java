@@ -17,7 +17,7 @@ public class FakeIns {
     public static Vector<Byte> transDataDefine(String dataDef) throws Exception {
         if (dataDef.startsWith(".space")) {
             try {
-                return space(Integer.parseInt(dataDef.substring(".space".length())));
+                return space(Integer.parseInt(dataDef.substring(".space".length()).trim()));
             } catch (NumberFormatException e) {
                 throw new Exception("Data define error - Space must be positive number");
             }
@@ -25,7 +25,7 @@ public class FakeIns {
 
         if (dataDef.startsWith(".align")) {
             try {
-                align(Integer.parseInt(dataDef.substring(".align".length())));
+                align(Integer.parseInt(dataDef.substring(".align".length()).trim()));
             } catch (NumberFormatException e) {
                 throw new Exception("Data define error - Bits must be greater than one");
             }

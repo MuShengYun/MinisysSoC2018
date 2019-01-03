@@ -28,6 +28,11 @@ public class FakeInsTest {
             dataDefs.add(".byte 9999");
             dataDefs.add(".ascii \"abc\":3");
             dataDefs.add(".asciiz \"a:c\"");
+            dataDefs.add(".space 4");
+            {
+                //dataDefs.add(".align 2");
+                //dataDefs.add(".byte 3,2,1");
+            }
 
             expect.append("ff00000000550055");
             expect.append("070ffd00");
@@ -42,6 +47,7 @@ public class FakeInsTest {
             expect.append("0f");
             expect.append("616263616263616263");
             expect.append("613a6300");
+            expect.append("00000000");
 
             for (String dataDef : dataDefs) {
                 Vector<Byte> bytes = FakeIns.transDataDefine(dataDef);
