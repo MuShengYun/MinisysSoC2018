@@ -1,60 +1,60 @@
 R
-add	000000	rs	rt	rd	00000	100000
-addu	000000	rs	rt	rd	00000	100001
-sub	000000	rs	rt	rd	00000	100010
-subu	000000	rs	rt	rd	00000	100011
-and	000000	rs	rt	rd	00000	100100
-mult	000000	rs	rt	0000000000	011000
-multu	000000	rs	rt	0000000000	011001
-div	000000	rs	rt	0000000000	011010
-divu	000000	rs	rt	0000000000	011011
-mfhi	000000	0000000000	rd	00000	010000
-mflo	000000	0000000000	rd	00000	010010
-mthi	000000	rs	000000000000000	010001
-mtlo	000000	rs	000000000000000	010011
-mfc0	010000	00000	rt	rd	00000000	sel
-mtc0	010000	00100	rt	rd	00000000	sel
-or	000000	rs	rt	rd	00000	100101
-xor	000000	rs	rt	rd	00000	100110
-nor	000000	rs	rt	rd	00000	100111
-slt	000000	rs	rt	rd	00000	101010
-sltu	000000	rs	rt	rd	00000	101011
-sll	000000	00000	rt	rd	shamt	000000
-srl	000000	00000	rt	rd	shamt	000010
-sra	000000	00000	rt	rd	shamt	000011
-sllv	000000	rs	rt	rd	00000	000100
-srlv	000000	rs	rt	rd	00000	000110
-srav	000000	rs	rt	rd	00000	000111
-jr	000000	rs	00000	00000	00000	001000
-jalr	000000	rs	00000	rd	00000	001001
-break	000000	code	001101
-syscall	000000	code	001100
+add	000000	rs(1)	rt(2)	rd(0)	00000	100000
+addu	000000	rs(1)	rt(2)	rd(0)	00000	100001
+sub	000000	rs(1)	rt(2)	rd(0)	00000	100010
+subu	000000	rs(1)	rt(2)	rd(0)	00000	100011
+and	000000	rs(1)	rt(2)	rd(0)	00000	100100
+mult	000000	rs(0)	rt(1)	0000000000	011000
+multu	000000	rs(0)	rt(1)	0000000000	011001
+div	000000	rs(0)	rt(1)	0000000000	011010
+divu	000000	rs(0)	rt(1)	0000000000	011011
+mfhi	000000	0000000000	rd(0)	00000	010000
+mflo	000000	0000000000	rd(0)	00000	010010
+mthi	000000	rs(0)	000000000000000	010001
+mtlo	000000	rs(0)	000000000000000	010011
+mfc0	010000	00000	rt(0)	rd(1)	00000000	sel(2)
+mtc0	010000	00100	rt(0)	rd(1)	00000000	sel(2)
+or	000000	rs(1)	rt(2)	rd(0)	00000	100101
+xor	000000	rs(1)	rt(2)	rd(0)	00000	100110
+nor	000000	rs(1)	rt(2)	rd(0)	00000	100111
+slt	000000	rs(1)	rt(2)	rd(0)	00000	101010
+sltu	000000	rs(1)	rt(2)	rd(0)	00000	101011
+sll	000000	00000	rt(1)	rd(0)	shamt(2)	000000
+srl	000000	00000	rt(1)	rd(0)	shamt(2)	000010
+sra	000000	00000	rt(1)	rd(0)	shamt(2)	000011
+sllv	000000	rs(2)	rt(1)	rd(0)	00000	000100
+srlv	000000	rs(2)	rt(1)	rd(0)	00000	000110
+srav	000000	rs(2)	rt(1)	rd(0)	00000	000111
+jr	000000	rs(0)	00000	00000	00000	001000
+jalr	000000	rs(1)	00000	rd(0)	00000	001001
+break	000000	code(0)	001101
+syscall	000000	code(0)	001100
 eret	000000	1000 0000 0000 0000 0000	011000
 I
-addi	001000	rs	rt	immediate
-addiu	001001	rs	rt	immediate
-andi	001100	rs	rt	immediate
-ori	001101	rs	rt	immediate
-xori	001110	rs	rt	immediate
-lui	001111	00000	rt	immediate
-lb	100000	rs	rt	offset
-lbu	100100	rs	rt	offset
-lh	100001	rs	rt	offset
-lhu	100101	rs	rt	offset
-sb	101000	rs	rt	offset
-sh	101001	rs	rt	offset
-lw	100011	rs	rt	offset
-sw	101011	rs	rt	offset
-beq	000100	rs	rt	offset
-bne	000101	rs	rt	offset
-bgez	000001	rs	00001	offset
-bgtz	000111	rs	00000	offset
-blez	000110	rs	00000	offset
-bltz	000001	rs	00000	offset
-bgezal	000001	rs	10001	offset
-bltzal	000001	rs	10000	offset
-slti	001010	rs	rt	immediate
-sltiu	001011	rs	rt	immediate
+addi	001000	rs(1)	rt(0)	immediate(2)
+addiu	001001	rs(1)	rt(0)	immediate(2)
+andi	001100	rs(1)	rt(0)	immediate(2)
+ori	001101	rs(1)	rt(0)	immediate(2)
+xori	001110	rs(1)	rt(0)	immediate(2)
+lui	001111	00000	rt(0)	immediate(1)
+lb	100000	rs(1)	rt(0)	offset(2)
+lbu	100100	rs(1)	rt(0)	offset(2)
+lh	100001	rs(1)	rt(0)	offset(2)
+lhu	100101	rs(1)	rt(0)	offset(2)
+sb	101000	rs(1)	rt(0)	offset(2)
+sh	101001	rs(1)	rt(0)	offset(2)
+lw	100011	rs(1)	rt(0)	offset(2)
+sw	101011	rs(1)	rt(0)	offset(2)
+beq	000100	rs(0)	rt(1)	offset(2)
+bne	000101	rs(0)	rt(1)	offset(2)
+bgez	000001	rs(0)	00001	offset(1)
+bgtz	000111	rs(0)	00000	offset(1)
+blez	000110	rs(0)	00000	offset(1)
+bltz	000001	rs(0)	00000	offset(1)
+bgezal	000001	rs(0)	10001	offset(1)
+bltzal	000001	rs(0)	10000	offset(1)
+slti	001010	rs(1)	rt(0)	immediate(2)
+sltiu	001011	rs(1)	rt(0)	immediate(2)
 J
-j	000010	address
-jal	000011	address
+j	000010	address(0)
+jal	000011	address(0)
