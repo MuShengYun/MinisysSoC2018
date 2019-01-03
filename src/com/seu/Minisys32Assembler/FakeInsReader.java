@@ -32,13 +32,14 @@ public class FakeInsReader {
             }
         } else {
             if (null != nextSize) {
-                int numOfFilledBytes = nextSize - dataAddrDistributor.baseAddress % nextSize;
+                int numOfFilledBytes = nextSize - dataAddrDistributor.offsetAddress % nextSize;
                 space(numOfFilledBytes);
             }
 
             bytes.addAll(defines(dataDef));
+            nextSize = null;
         }
-        nextSize = null;
+
         dataBytes.addAll(bytes);
         return dataAddrDistributor.distributeAddress(bytes.size());
 
@@ -148,7 +149,7 @@ public class FakeInsReader {
     }
 
     private void space(int size) throws Exception {
-        if (size <= 0) throw new Exception();
+        if (size < 0) throw new Exception();
         for (int i = 0; i < size; i++) {
             dataBytes.add((byte) 0);
         }
