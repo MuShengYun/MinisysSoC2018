@@ -1,7 +1,5 @@
 package com.seu.Minisys32Assembler;
 
-import javafx.util.Pair;
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -19,12 +17,12 @@ public class ASMFile {
     private BufferedReader reader;
 
     /*Data*/
-    public AddressDistributor dataAddrDistributor;
+    public AddrDistributor dataAddrDistributor;
     public HashMap<String, Address> memonis; //助记符
-    public Vector<Pair<String, Integer>> datas;
+    public Vector<Byte> dataBytes;
 
     /*Code*/
-    public AddressDistributor codeAddrDistributor;
+    public AddrDistributor codeAddrDistributor;
     public Vector<String> instructionCodes = new Vector<>();
 
     /*Symbol Table*/
@@ -49,9 +47,9 @@ public class ASMFile {
         //第一次扫描
         firstScan();
 
+        //第二次扫描
         reader.reset();
-        readData();
-        readCode();
+        secondScan();
     }
 
     /**
@@ -72,20 +70,16 @@ public class ASMFile {
             throw new Exception("Program format error - Data segment unfounded");
         }
 
-        String address = line.substring(5).trim().split("[ \t]")[0];
-        if (address.isEmpty())
-            dataAddrDistributor = new AddressDistributor(0);
-        else {
-            try {
-                dataAddrDistributor = new AddressDistributor(Integer.parseInt(address));
-            } catch (NumberFormatException e) {
-                throw new Exception("Number format error - Unidentified number");
-            }
+        String dataBaseAddr = line.substring(5).trim().split("[ \t]")[0];
+        try {
+            dataAddrDistributor = new AddrDistributor(dataBaseAddr.isEmpty() ? 0 : Integer.parseInt(dataBaseAddr));
+        } catch (NumberFormatException e) {
+            throw new Exception("Number format error - Unidentified address");
         }
 
         try {
-            line = reader.readLine().trim().toLowerCase();
-            while ((!line.startsWith(".text"))) {
+            line = reader.readLine().trim();
+            while (!line.startsWith(".text") && !line.startsWith(".TEXT")) {
                 String dataDef = line.split("#", 2)[0].toLowerCase().trim();
                 //判断本行是否为空或只有注释
                 if (dataDef.isEmpty() || dataDef.startsWith("#")) continue;
@@ -94,50 +88,75 @@ public class ASMFile {
                     String[] splits = dataDef.split(":", 2);
                     String memoni = splits[0].trim();
                     dataDef = splits[1].trim();
-                    //byte[] data = FakeIns.transDataDefine(dataDef).getBytes();
+                    Vector<Byte> data = FakeIns.transDataDefine(dataDef);
+                    dataBytes.addAll(data);
                     if (memonis.containsKey(memoni))
                         throw new Exception("Syntax format error - Redefine of memoni" + memoni);
                     checkNaming(memoni);
-                    //memonis.put(memoni, dataAddrDistributor.distributeAddress(data.length));
-                }
+                    memonis.put(memoni, dataAddrDistributor.distributeAddress(data.size()));
+                } else
+                    dataBytes.addAll(FakeIns.transDataDefine(dataDef));
 
             }
         } catch (IOException e) {
             throw new Exception("Program format error - Code segment unfounded");
         }
 
-    }
-
-    private void readData() throws Exception {
-        String line;
-        while ((line = reader.readLine()) != null && !line.startsWith(".TEXT")) {
-
+        String codeBaseAddr = line.substring(5).trim().split("[ \t]")[0];
+        try {
+            codeAddrDistributor = new AddrDistributor(codeBaseAddr.isEmpty() ? 0 : Integer.parseInt(codeBaseAddr));
+        } catch (NumberFormatException e) {
+            throw new Exception("Number format error - Unidentified address");
         }
-        //TODO:
-    }
 
-    /**
-     * 读取代码段
-     *
-     * @throws Exception 代码段语法错误
-     */
-    private void readCode() throws Exception {
-        String line;
         while ((line = reader.readLine()) != null) {
             String ins = line.split("#", 2)[0].toLowerCase().trim();
             //判断本行是否为空或只有注释
             if (ins.isEmpty() || ins.startsWith("#")) continue;
             if (codeLabels.isEmpty() && !ins.contains(":"))
                 throw new Exception("Syntax format error - Need a label for the first instruction");
+            Address currentAddr = codeAddrDistributor.distributeAddress(4);
             if (ins.contains(":")) {
                 String[] splits = ins.split(":", 2);
                 String label = splits[0].trim();
                 ins = splits[1].trim();
+                if (!ins.matches("[a-zA-Z].*[ \t]+[a-zA-Z].*(,[ \t]*[a-zA-Z].*)*"))
+                    throw new Exception("Instruction format error - Not match \"op s1,s2,...\"");
                 if (codeLabels.containsKey(label))
                     throw new Exception("Syntax format error - Redefine of label" + label);
                 checkNaming(label);
-                //codeLabels.put(label, new Address());
+                codeLabels.put(label, currentAddr);
             }
+        }
+
+    }
+
+    /**
+     * 第二次扫描
+     *
+     * @throws Exception 代码段语法错误
+     */
+    private void secondScan() throws Exception {
+        String line;
+        while ((line = reader.readLine()) != null) {
+            String ins = line.split("#", 2)[0].toLowerCase().trim();
+            //判断本行是否为空或只有注释
+            if (ins.isEmpty() || ins.startsWith("#")) continue;
+            if (ins.contains(":")) {
+                String[] splits = ins.split(":", 2);
+                String label = splits[0].trim();
+                ins = splits[1].trim();
+            }
+            for (String memoni : memonis.keySet()) {
+                if (ins.contains(memoni))
+                    ins = ins.replace(memoni, memonis.get(memoni).toString());
+            }
+
+            for (String label : codeLabels.keySet()) {
+                if (ins.contains(label))
+                    ins = ins.replace(label, codeLabels.get(label).toString());
+            }
+
             instructionCodes.add(Instruction.transform(ins));
         }
 

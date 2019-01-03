@@ -12,4 +12,8 @@ public class Address {
         byteCount = size;
     }
 
+    @Override
+    public String toString() {
+        return "0x" + Integer.toHexString(baseAddress + offsetAddress);
+    }
 }
