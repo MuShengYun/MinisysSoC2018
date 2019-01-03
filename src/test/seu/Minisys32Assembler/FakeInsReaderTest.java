@@ -1,17 +1,19 @@
 package test.seu.Minisys32Assembler;
 
-import com.seu.Minisys32Assembler.FakeIns;
+import com.seu.Minisys32Assembler.FakeInsReader;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
 import java.util.Vector;
 
-public class FakeInsTest {
+public class FakeInsReaderTest {
 
     @Test
     public void transDataDefine() {
         try {
+            FakeInsReader fakeInsReader = new FakeInsReader();
+
             StringBuilder fact = new StringBuilder();
             StringBuilder expect = new StringBuilder();
             Vector<String> dataDefs = new Vector<>();
@@ -50,12 +52,11 @@ public class FakeInsTest {
             expect.append("00000000");
 
             for (String dataDef : dataDefs) {
-                Vector<Byte> bytes = FakeIns.transDataDefine(dataDef);
-
-                for (byte b : bytes) {
-                    fact.append(Integer.toHexString(b & 0xff | 0xffffff00).substring(6));
-                    //System.out.print(Integer.toHexString(b & 0xff | 0xffffff00).substring(6) + "\t");
-                }
+                fakeInsReader.readDataDefine(dataDef);
+            }
+            for (byte b : fakeInsReader.dataBytes) {
+                fact.append(Integer.toHexString(b & 0xff | 0xffffff00).substring(6));
+                //System.out.print(Integer.toHexString(b & 0xff | 0xffffff00).substring(6) + "\t");
             }
             assertEquals(expect.toString(), fact.toString());
         } catch (Exception e) {

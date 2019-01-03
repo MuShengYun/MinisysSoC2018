@@ -83,6 +83,10 @@ public class Instruction {
         registers.put("$s8", registerCount++);
         registers.put("$ra", registerCount);
 
+        for (int i = 0; i < 32; i++) {
+            registers.put("$" + i, i);
+        }
+
     }
 
     /**

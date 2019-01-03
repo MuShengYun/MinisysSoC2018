@@ -3,9 +3,11 @@ package com.seu.Minisys32Assembler;
 import javax.xml.ws.WebServiceException;
 import java.util.Vector;
 
-public class FakeIns {
+public class FakeInsReader {
 
-    private static Integer nextSize;
+    private Integer nextSize = null;
+    public AddrDistributor dataAddrDistributor = new AddrDistributor(0);
+    public Vector<Byte> dataBytes = new Vector<>();
 
     /**
      * 伪指令处理
@@ -14,29 +16,31 @@ public class FakeIns {
      * @return 以数组的形式返回字节流
      * @throws Exception 伪指令格式错误
      */
-    public static Vector<Byte> transDataDefine(String dataDef) throws Exception {
+    public Address readDataDefine(String dataDef) throws Exception {
+        Vector<Byte> bytes = new Vector<>();
         if (dataDef.startsWith(".space")) {
             try {
-                return space(Integer.parseInt(dataDef.substring(".space".length()).trim()));
+                space(Integer.parseInt(dataDef.substring(".space".length()).trim()));
             } catch (NumberFormatException e) {
                 throw new Exception("Data define error - Space must be positive number");
             }
-        }
-
-        if (dataDef.startsWith(".align")) {
+        } else if (dataDef.startsWith(".align")) {
             try {
                 align(Integer.parseInt(dataDef.substring(".align".length()).trim()));
             } catch (NumberFormatException e) {
                 throw new Exception("Data define error - Bits must be greater than one");
             }
-            return new Vector<>();
-        }
+        } else {
+            if (null != nextSize) {
+                int numOfFilledBytes = nextSize - dataAddrDistributor.baseAddress % nextSize;
+                space(numOfFilledBytes);
+            }
 
-        Vector<Byte> bytes = defines(dataDef);
-        while (nextSize != null && bytes.size() < nextSize)
-            bytes.add((byte) 0);
+            bytes.addAll(defines(dataDef));
+        }
         nextSize = null;
-        return bytes;
+        dataBytes.addAll(bytes);
+        return dataAddrDistributor.distributeAddress(bytes.size());
 
     }
 
@@ -48,7 +52,7 @@ public class FakeIns {
      * @return 以数组的形式返回字节流
      * @throws Exception 伪指令格式错误
      */
-    private static Vector<Byte> defines(String dataDef) throws Exception {
+    private Vector<Byte> defines(String dataDef) throws Exception {
 
         Vector<Byte> bytes = new Vector<>();
 
@@ -143,16 +147,15 @@ public class FakeIns {
         return bytes;
     }
 
-    private static Vector<Byte> space(int size) throws Exception {
+    private void space(int size) throws Exception {
         if (size <= 0) throw new Exception();
-        Vector<Byte> bytes = new Vector<>();
         for (int i = 0; i < size; i++) {
-            bytes.add((byte) 0);
+            dataBytes.add((byte) 0);
         }
-        return bytes;
+        dataAddrDistributor.distributeAddress(size);
     }
 
-    private static void align(int numOfBits) throws Exception {
+    private void align(int numOfBits) throws Exception {
         if (numOfBits <= 1) throw new Exception();
         nextSize = 1 << numOfBits;
     }
