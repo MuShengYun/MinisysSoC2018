@@ -15,13 +15,13 @@ public class InstructionTest {
     public void transform() {
         Vector<String> expect = new Vector<>();
         Vector<String> instructions = new Vector<>();
-        //instructions.add("j 1024");//todo:j型指令操作数address没有除以4
+        instructions.add("j 1024");
         instructions.add("add\t$a3,$a1,$a2");
         instructions.add("addu\t$a3,$a1,$a2");
         instructions.add("sub\t$a2,$a1,$a0");
         instructions.add("subu\t$a2,$a1,$a0");
         instructions.add("and\t$a2,$a1,$a0");
-        instructions.add("mult\t$a2,$a1");//todo:"Operator expected"少打了ed
+        instructions.add("mult\t$a2,$a1");
         instructions.add("multu\t$a2,$a1");
         instructions.add("div\t$a2,$a1");
         instructions.add("divu\t$a2,$a1");
@@ -37,7 +37,7 @@ public class InstructionTest {
         instructions.add("slt $a2,$a1,$a0");
         instructions.add("sltu $a2,$a1,$a0");
         instructions.add("sll $a2,$a1,10");
-        //instructions.add("sll $a2,$a1,00010b");//todo:识别二进制数时后面应“-1”而不是“-2”
+        instructions.add("sll $a2,$a1,00010b");
         instructions.add("srl $a2,$a1,10");
         instructions.add("sra $a2,$a1,10");
         instructions.add("sllv $a2,$a1,$a0");
@@ -47,7 +47,7 @@ public class InstructionTest {
         instructions.add("jalr $a1,$a0");
         //instructions.add("break");
         //instructions.add("syscall");
-        //instructions.add("eret");
+        instructions.add("eret");
 
         instructions.add("addi $a2,$a1,10");
         instructions.add("addi $a2,$a1,-10");
@@ -73,26 +73,21 @@ public class InstructionTest {
         instructions.add("bgezal $a1,10");
         instructions.add("bltzal $a1,10");
         instructions.add("slti $a1,$a0,10");
-        instructions.add("sltiu $a1,$a0,10");
+        instructions.add("sltiu $a1,$a0,0x0A");
 
-        //instructions.add("jal 1024");
+        instructions.add("jal 1024");
 
         Vector<String> fact = new Vector<>();
 
 
-        //expect.add("00001000000000000000000100000000");//j 1024
+        expect.add("00001000000000000000000100000000");//j 1024
 
-        /**todo:rs,rt,td逻辑顺序错误
-         * */
         expect.add("00000000101001100011100000100000");//add\t$a3,$a1,$a2
         expect.add("00000000101001100011100000100001");//addu\t$a3,$a1,$a2
         expect.add("00000000101001000011000000100010");//sub\t$a2,$a1,$a0
         expect.add("00000000101001000011000000100011");//subu\t$a2,$a1,$a0
         expect.add("00000000101001000011000000100100");//and\t$a2,$a1,$a0
 
-
-        /**correct
-         * */
         expect.add("00000000110001010000000000011000");//mult\t$a2,$a1
         expect.add("00000000110001010000000000011001");//multu\t$a2,$a1
         expect.add("00000000110001010000000000011010");//div\t$a2,$a1
@@ -104,9 +99,6 @@ public class InstructionTest {
         expect.add("01000000000001100010100000000000");//mfc0\t$a2,$a1,0
         expect.add("01000000100001100010100000000000");//mtc0\t$a2,$a1,0
 
-
-        /**todo:rs,rt,td逻辑顺序错误
-         * */
         expect.add("00000000101001000011000000100101");//or $a2,$a1,$a0
         expect.add("00000000101001000011000000100110");//xor $a2,$a1,$a0
         expect.add("00000000101001000011000000100111");//nor $a2,$a1,$a0
@@ -114,7 +106,7 @@ public class InstructionTest {
         expect.add("00000000101001000011000000101011");//sltu $a2,$a1,$a0
 
         expect.add("00000000000001010011001010000000");//sll $a2,$a1,10
-        //expect.add("00000000000001010011000010000000");//todo:sll $a2,$a1,00010b
+        expect.add("00000000000001010011000010000000");//sll $a2,$a1,00010b
         expect.add("00000000000001010011001010000010");//srl $a2,$a1,10
         expect.add("00000000000001010011001010000011");//sra $a2,$a1,10
 
@@ -137,13 +129,11 @@ public class InstructionTest {
          * */
         //expect.add("");//todo:break
         //expect.add("");//todo:syscall
-        //expect.add("00000010000000000000000000011000");//todo:eret读定义文件时，判断空格应改为[ \t]
+        expect.add("00000010000000000000000000011000");//eret
 
 
-        /**todo:rs,rt,td逻辑顺序错误
-         * */
         expect.add("00100000101001100000000000001010");//addi $a2,$a1,10
-        expect.add("00100000101001100000000000010110");//addi $a2,$a1,-10
+        expect.add("00100000101001101111111111110110");//addi $a2,$a1,-10
         expect.add("00100100101001100000000000001010");//addiu $a2,$a1,10
         expect.add("00110000101001100000000000001010");//andi $a2,$a1,10
         expect.add("00110100101001100000000000001010");//ori $a2,$a1,10
@@ -189,16 +179,15 @@ public class InstructionTest {
         expect.add("00101000100001010000000000001010");//slti $a1,$a0,10
         expect.add("00101100100001010000000000001010");//sltiu $a1,$a0,10
 
-        //expect.add("00001100000000000000000100000000");//jal 1024
-
+        expect.add("00001100000000000000000100000000");//jal 1024
 
 
         try {
             for (String instruction : instructions) {
                 fact.add(Instruction.transform(instruction));
             }
-                //System.out.println(Instruction.transform(instructions.get(i), false));
-                assertEquals(expect,fact);
+            //System.out.println(Instruction.transform(instructions.get(i), false));
+            assertEquals(expect, fact);
         } catch (Exception e) {
             e.printStackTrace();
         }

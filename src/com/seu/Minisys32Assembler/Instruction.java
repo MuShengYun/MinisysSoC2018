@@ -46,7 +46,7 @@ public class Instruction {
                 }
                 String operator = line.split("\t")[0];
                 Vector<String> operands = new Vector<>();
-                String[] splits = line.replaceFirst(operator, "").split("\t");
+                String[] splits = line.replaceFirst(operator, "").split("[ \t]+");
                 for (String split : splits) {
                     if (!split.trim().isEmpty())
                         operands.add(split.trim());
@@ -104,27 +104,25 @@ public class Instruction {
      */
     public static String transform(String ins, boolean isDebugMode) throws Exception {
 
-        //分割操作符与操作数
+        //分割操作符与操作数,注意顺序
         String operator = ins.split("[ \t]")[0];
         ArrayList<String> operands = new ArrayList<>();
         String[] splits = ins.replaceFirst(operator, "").split(",");    //按照逗号分隔
         for (String split : splits) {
-            split = split.replaceAll("[ \t]","");
+            split = split.replaceAll("[ \t]", "");
             if (split.matches(".+\\(.+\\)")) {   //如果有寄存器间接寻址，进行分离
                 String[] innerSplits = split.split("[( )]");
                 operands.add(innerSplits[1]);     //如20($t0), 分隔为$t0和20两个操作数
                 operands.add(innerSplits[0]);
-            }
-            else
+            } else
                 operands.add(split);
         }
 
         //如果代码规则部分是二进制码，直接添加至字符串尾部；否则寻找对应的操作数，并转换
         StringBuilder code = new StringBuilder();
-        int operandCount = 0;
         Vector<String> code_parts = ins_rule.get(operator);
         if (null == code_parts)
-            throw new Exception("Instruction format error - Operator expect");
+            throw new Exception("Instruction format error - Operator expected");
         if (isDebugMode)
             switch (ins_type.get(operator)) {
                 case 'R':
@@ -137,21 +135,28 @@ public class Instruction {
                     code.append("op\taddress\n");
                     break;
             }
+
+        int maxPos = 0;
         for (String code_part : code_parts) {
             if (code_part.matches("[0-1]*")) {
                 code.append(code_part);
             } else {
-                if (operands.size() <= operandCount)
+                try {
+                    String[] twoSplit = code_part.split("[()]");
+                    int pos = Integer.parseInt(twoSplit[1]);
+                    if (pos > maxPos) maxPos = pos;
+                    code_part = twoSplit[0];
+                    code.append(operandStandardize(operator, code_part, operands.get(pos)));
+                } catch (Exception e) {
                     throw new Exception("Instruction format error - Not enough operands");
-                code.append(operandStandardize(operator, code_part, operands.get(operandCount++)));
+                }
             }
             if (isDebugMode)
                 code.append("\t");
         }
         if (isDebugMode)
             code.append("\b");
-
-        if (operands.size() < operandCount)
+        if (operands.size() > maxPos + 1)
             throw new Exception("Syntax format error - Extra characters on line");
         return code.toString();
 
@@ -186,7 +191,7 @@ public class Instruction {
             if (operand.length() == 3)
                 num = operand.charAt(1);
             else if (operand.length() > 3 && operand.charAt(1) == '\\') {
-                String es = operand.substring(2, length - 2);
+                String es = operand.substring(2, length - 1);
                 if (es.equals("r")) num = '\r';
                 if (es.equals("t")) num = '\t';
                 if (es.equals("n")) num = '\n';
@@ -204,41 +209,40 @@ public class Instruction {
 
                 switch (operand.charAt(length - 1)) {
                     case 'b':
-                        num = Integer.parseInt(operand.substring(0, length - 2), 2);
+                        num = Integer.parseInt(operand.substring(0, length - 1), 2);
                         break;
                     case 'h':
-                        num = Integer.parseInt(operand.substring(0, length - 2), 16);
+                        num = Integer.parseInt(operand.substring(0, length - 1), 16);
                         break;
                     case 'o':
-                        num = Integer.parseInt(operand.substring(0, length - 2), 8);
+                        num = Integer.parseInt(operand.substring(0, length - 1), 8);
                         break;
                     case 'd':
-                        num = Integer.parseInt(operand.substring(0, length - 2));
+                        num = Integer.parseInt(operand.substring(0, length - 1));
                         break;
                     default:
                         if (operand.startsWith("0x"))
-                            num = Integer.parseInt(operand.substring(2, length - 1), 16);
+                            num = Integer.parseInt(operand.substring(2), 16);
                         else num = Integer.parseInt(operand);
                 }
             } catch (NumberFormatException e) {
-            if(operand.matches("[a-zA-Z]"))
-                throw new Exception("Syntax format error - Symbol not defined");
-            else
-                throw new Exception("Number format error - Unidentified number");
+                if (operand.matches("[a-zA-Z]"))
+                    throw new Exception("Syntax format error - Symbol not defined");
+                else
+                    throw new Exception("Number format error - Unidentified number");
 
             }
 
         //跳转指令的偏移或地址除以4
-        if (operator.startsWith("b") && operand.equals("offset") ||
-                operator.startsWith("j") && operand.equals("address"))
-            num /= 4;
+        if (operator.startsWith("j") && operandType.equals("address"))
+            num = num >> 2;
 
         //转化为补码,扩展至相应位数
         String code = Integer.toBinaryString(num);
         Character signDigit = '0';
         if (operandType.equals("offset") || operandType.equals("immediate"))
             if (!operator.endsWith("u"))
-                signDigit = code.charAt(0);
+                signDigit = num >= 0 ? '0' : '1';
         int numOfBits = 0;
         switch (operandType) {
             case "sel":
@@ -249,7 +253,7 @@ public class Instruction {
                 break;
             case "immediate":
             case "offset":
-                numOfBits = 6;
+                numOfBits = 16;
                 break;
             case "address":
                 numOfBits = 26;
