@@ -15,4 +15,5 @@ public class ASMFileTest {
         ASMFile asmFile = new ASMFile("input/assemblerTest.asm");
         asmFile.instructionCodes.forEach(System.out::println);
     }
+
 }

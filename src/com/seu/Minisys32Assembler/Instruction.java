@@ -224,13 +224,13 @@ public class Instruction {
             if(operand.matches("[a-zA-Z]"))
                 throw new Exception("Syntax format error - Symbol not defined");
             else
-                throw new Exception("Lex format error - Unidentified number");
+                throw new Exception("Number format error - Unidentified number");
 
             }
 
         //跳转指令的偏移或地址除以4
         if (operator.startsWith("b") && operand.equals("offset") ||
-                operand.startsWith("j") && operand.equals("address"))
+                operator.startsWith("j") && operand.equals("address"))
             num /= 4;
 
         //转化为补码,扩展至相应位数
