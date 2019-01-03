@@ -1,17 +1,15 @@
 package test.seu.Minisys32Assembler;
 
 import com.seu.Minisys32Assembler.Instruction;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Vector;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class InstructionTest {
 
     @Test
-    @Ignore
     public void transform() {
         Vector<String> expect = new Vector<>();
         Vector<String> instructions = new Vector<>();
