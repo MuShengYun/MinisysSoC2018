@@ -139,7 +139,7 @@ public class Instruction {
                     code.append("op\taddress\n");
                     break;
                 case "EX":
-                    code.append("");
+                    code.append("op..");
             }
 
         int maxPos = 0;
