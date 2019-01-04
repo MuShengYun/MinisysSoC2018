@@ -1,16 +1,18 @@
-package test.seu.Minisys32Assembler;
+package test.seu.Minisys32Assembler.ins;
 
-import com.seu.Minisys32Assembler.Instruction;
+import com.seu.Minisys32Assembler.ins.InsReader;
 import org.junit.Test;
 
 import java.util.Vector;
 
 import static org.junit.Assert.assertEquals;
 
-public class InstructionTest {
+public class InsReaderTest {
 
     @Test
     public void transform() {
+        InsReader insReader = new InsReader();
+
         Vector<String> expect = new Vector<>();
         Vector<String> instructions = new Vector<>();
         instructions.add("j 1024");
@@ -161,14 +163,14 @@ public class InstructionTest {
         expect.add("00001100000000000000000100000000");//jal 1024
 
         try {
-        expect.add(Instruction.transform("sw $7,0($sp)") +Instruction.transform("addi $sp,$sp,4"));
-        expect.add(Instruction.transform("addi $sp,$sp,-4")+Instruction.transform("lw $7,0($sp)"));
-        expect.add(Instruction.transform("slt $1,$3,$2")+Instruction.transform("bne $1,$0,-1"));
+        expect.add(insReader.transform("sw $7,0($sp)") +insReader.transform("addi $sp,$sp,4"));
+        expect.add(insReader.transform("addi $sp,$sp,-4")+insReader.transform("lw $7,0($sp)"));
+        expect.add(insReader.transform("slt $1,$3,$2")+insReader.transform("bne $1,$0,-1"));
 
             for (String instruction : instructions) {
-                fact.add(Instruction.transform(instruction));
+                fact.add(insReader.transform(instruction));
             }
-            //System.out.println(Instruction.transform(instructions.get(i), false));
+            //System.out.println(InsReader.transform(instructions.get(i), false));
             assertEquals(expect, fact);
         } catch (Exception e) {
             e.printStackTrace();

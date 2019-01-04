@@ -1,4 +1,8 @@
-package com.seu.Minisys32Assembler;
+package com.seu.Minisys32Assembler.io;
+
+import com.seu.Minisys32Assembler.addr.Address;
+import com.seu.Minisys32Assembler.ins.DirectorReader;
+import com.seu.Minisys32Assembler.ins.InsReader;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -12,26 +16,25 @@ import java.util.Vector;
  *
  * @author XU CHENGZHUO
  */
-public class ASMFile {
+public class AsmFile {
 
     private BufferedReader reader;
 
     /*Data*/
-    private HashMap<String, Address> memonis = new HashMap<>(); //助记符
-    public FakeInsReader fakeInsReader = new FakeInsReader();
+    public DirectorReader directorReader = new DirectorReader();
 
     /*Code*/
-    private AddrDistributor codeAddrDistributor = new AddrDistributor(0);
-    public Vector<Byte> instructionBytes = new Vector<>();
+    public InsReader insReader = new InsReader();
     private Vector<String> instructions = new Vector<>();
 
     /*Symbol Table*/
+    private HashMap<String, Address> memonis = new HashMap<>(); //助记符
     private HashMap<String, Address> codeLabels = new HashMap<>();
     static private HashSet<String> reserveWords = new HashSet<>();
 
     static {
-        reserveWords.addAll(Instruction.registers.keySet());
-        reserveWords.addAll(Instruction.ins_type.keySet());
+        reserveWords.addAll(InsReader.registers.keySet());
+        reserveWords.addAll(InsReader.ins_type.keySet());
     }
 
     /**
@@ -41,7 +44,7 @@ public class ASMFile {
      * @param filePath asm文件路径
      * @throws Exception 编译错误
      */
-    public ASMFile(String filePath) throws Exception {
+    public AsmFile(String filePath) throws Exception {
         reader = new BufferedReader(new FileReader(filePath));
         firstScan();
         secondScan();
@@ -68,12 +71,7 @@ public class ASMFile {
         String dataBaseAddr = line.substring(5).trim().split("[ \t]")[0];
         if (!dataBaseAddr.isEmpty() && !dataBaseAddr.startsWith("#"))
             try {
-                int value;
-                if (dataBaseAddr.startsWith("0x"))
-                    value = Integer.parseInt(dataBaseAddr.substring(2), 16);
-                else
-                    value = Integer.parseInt(dataBaseAddr);
-                fakeInsReader.dataAddrDistributor = new AddrDistributor(value);
+                directorReader.initAddr(parseInt(dataBaseAddr));
             } catch (NumberFormatException e) {
                 throw new Exception("Number format error - Unidentified address");
             }
@@ -92,9 +90,9 @@ public class ASMFile {
                     if (memonis.containsKey(memoni))
                         throw new Exception("Syntax format error - Redefine of memoni" + memoni);
                     checkNaming(memoni);
-                    memonis.put(memoni, fakeInsReader.readDataDefine(dataDef));
+                    memonis.put(memoni, directorReader.readDataDefine(dataDef));
                 } else
-                    fakeInsReader.readDataDefine(dataDef);
+                    directorReader.readDataDefine(dataDef);
                 line = reader.readLine().trim();
             }
         } catch (IOException e) {
@@ -104,12 +102,7 @@ public class ASMFile {
         String codeBaseAddr = line.substring(5).trim().split("[ \t]")[0];
         if (!codeBaseAddr.isEmpty() && !codeBaseAddr.startsWith("#"))
             try {
-                int value;
-                if (codeBaseAddr.startsWith("0x"))
-                    value = Integer.parseInt(codeBaseAddr.substring(2), 16);
-                else
-                    value = Integer.parseInt(codeBaseAddr);
-                codeAddrDistributor = new AddrDistributor(value);
+                insReader.initAddr(parseInt(codeBaseAddr));
             } catch (NumberFormatException e) {
                 throw new Exception("Number format error - Unidentified address");
             }
@@ -120,16 +113,16 @@ public class ASMFile {
             if (ins.isEmpty() || ins.startsWith("#")) continue;
             if (codeLabels.isEmpty() && !ins.contains(":"))
                 throw new Exception("Syntax format error - Need a label for the first instruction");
-            Address currentAddr = codeAddrDistributor.distributeAddress(4);
             if (ins.contains(":")) {
                 String[] splits = ins.split(":", 2);
                 String label = splits[0].trim();
                 ins = splits[1].trim();
                 if (!ins.matches("[a-zA-Z].*[ \t]+[a-zA-Z0-9_$].*(,[ \t]*[a-zA-Z0-9_$].*)*"))
-                    throw new Exception("Instruction format error - Not match \"op s1,s2,...\"");
+                    throw new Exception("InsReader format error - Not match \"op s1,s2,...\"");
                 if (codeLabels.containsKey(label))
                     throw new Exception("Syntax format error - Redefine of label" + label);
                 checkNaming(label);
+                Address currentAddr = insReader.codeAddrDistributor.distributeAddress(4);
                 codeLabels.put(label, currentAddr);
             }
             instructions.add(ins);
@@ -144,6 +137,8 @@ public class ASMFile {
      * @throws Exception
      */
     private void secondScan() throws Exception {
+
+        insReader.codeAddrDistributor.resetOffset();
         for (String ins : instructions) {
             for (String memoni : memonis.keySet()) {
                 if (ins.contains(memoni))
@@ -154,14 +149,8 @@ public class ASMFile {
                     ins = ins.replace(label, codeLabels.get(label).toString());
             }
             try {
-                String ins_str = Instruction.transform(ins);
-                if (ins_str.length() % 32 != 0)
-                    throw new Exception("Internal logic error - Unhandled Instruction problem");
-
-                for (int i = 0; i < ins_str.length()  / Byte.SIZE; i++) {
-                    int byt = Integer.parseInt(ins_str.substring(8 * i, 8 * i + 8));
-                    instructionBytes.add((byte) byt);
-                }
+                Address currentAddress = insReader.codeAddrDistributor.distributeAddress(4);
+                insReader.transform(ins);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -174,6 +163,13 @@ public class ASMFile {
             throw new Exception("Lex format error - Nonstandard naming of " + symbol);
         if (reserveWords.contains(symbol))
             throw new Exception("Syntax format error - Reserved word used as a symbol" + symbol);
+    }
+
+    private int parseInt(String s) {
+        if (s.startsWith("0x"))
+            return Integer.parseInt(s.substring(2), 16);
+        else
+            return Integer.parseInt(s);
     }
 
 

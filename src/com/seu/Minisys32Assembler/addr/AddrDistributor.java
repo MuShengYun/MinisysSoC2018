@@ -1,5 +1,8 @@
-package com.seu.Minisys32Assembler;
+package com.seu.Minisys32Assembler.addr;
 
+/**
+ * 地址分配器类
+ */
 public class AddrDistributor {
 
     int baseAddress = 0;
@@ -15,6 +18,14 @@ public class AddrDistributor {
         Address address = new Address(baseAddress, offsetAddress, numOfBytes);
         offsetAddress += numOfBytes;
         return address;
+    }
+
+    public void resetOffset() {
+        offsetAddress = 0;
+    }
+
+    public int getCurrentAddress() {
+        return baseAddress + offsetAddress;
     }
 
 }

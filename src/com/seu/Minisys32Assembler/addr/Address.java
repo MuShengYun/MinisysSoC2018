@@ -1,5 +1,9 @@
-package com.seu.Minisys32Assembler;
+package com.seu.Minisys32Assembler.addr;
 
+/**
+ * 地址类
+ * 对应一个数据的所在基址，偏移地址以及所占空间字节数
+ */
 public class Address {
 
     int baseAddress;
@@ -10,6 +14,10 @@ public class Address {
         baseAddress = base;
         offsetAddress = offset;
         byteCount = size;
+    }
+
+    public int getAddress() {
+        return baseAddress + offsetAddress;
     }
 
     @Override

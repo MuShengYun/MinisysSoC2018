@@ -1,16 +1,29 @@
-package com.seu.Minisys32Assembler;
+package com.seu.Minisys32Assembler.ins;
 
-import javax.xml.ws.WebServiceException;
+import com.seu.Minisys32Assembler.addr.AddrDistributor;
+import com.seu.Minisys32Assembler.addr.Address;
+
 import java.util.Vector;
 
-public class FakeInsReader {
+/**
+ * 汇编伪指令类
+ */
+public class DirectorReader {
 
-    private Integer nextSize = null;
     public AddrDistributor dataAddrDistributor = new AddrDistributor(0);
     public Vector<Byte> dataBytes = new Vector<>();
 
     /**
+     * 分配初始地址
+     * @param addr 地址base
+     */
+    public void initAddr(int addr) {
+        dataAddrDistributor = new AddrDistributor(addr);
+    }
+
+    /**
      * 伪指令处理
+     * 包含数据定义伪指令和边界对齐伪指令
      *
      * @param dataDef 伪指令,必须全部是小写且首尾没有空格
      * @return 以数组的形式返回字节流
@@ -31,13 +44,7 @@ public class FakeInsReader {
                 throw new Exception("Data define error - Bits must be greater than one");
             }
         } else {
-            if (null != nextSize) {
-                int numOfFilledBytes = nextSize - dataAddrDistributor.offsetAddress % nextSize;
-                space(numOfFilledBytes);
-            }
-
             bytes.addAll(defines(dataDef));
-            nextSize = null;
         }
 
         dataBytes.addAll(bytes);
@@ -148,6 +155,12 @@ public class FakeInsReader {
         return bytes;
     }
 
+    /**
+     * 空出n个字节
+     *
+     * @param size 空出空间大小
+     * @throws Exception 参数为负数
+     */
     private void space(int size) throws Exception {
         if (size < 0) throw new Exception();
         for (int i = 0; i < size; i++) {
@@ -156,8 +169,16 @@ public class FakeInsReader {
         dataAddrDistributor.distributeAddress(size);
     }
 
+    /**
+     * 边界对齐伪指令
+     *
+     * @param numOfBits 按照2的幂决定对齐的起始位置
+     * @throws Exception 参数不大于1
+     */
     private void align(int numOfBits) throws Exception {
         if (numOfBits <= 1) throw new Exception();
-        nextSize = 1 << numOfBits;
+        int nextSize = 1 << numOfBits;
+        int numOfFilledBytes = nextSize - dataAddrDistributor.getCurrentAddress() % nextSize;
+        space(numOfFilledBytes);
     }
 }

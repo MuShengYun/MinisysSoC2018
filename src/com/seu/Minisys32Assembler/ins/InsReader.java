@@ -1,4 +1,6 @@
-package com.seu.Minisys32Assembler;
+package com.seu.Minisys32Assembler.ins;
+
+import com.seu.Minisys32Assembler.addr.AddrDistributor;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -18,11 +20,14 @@ import java.util.Vector;
  * @author XU CHENGZHUO
  * @author ZHANG BINGXI
  */
-public class Instruction {
+public class InsReader {
 
     public static HashMap<String, String> ins_type = new HashMap<>();
     private static HashMap<String, Vector<String>> ins_rule = new HashMap<>();
     public static HashMap<String, Integer> registers = new HashMap<>();
+
+    public AddrDistributor codeAddrDistributor = new AddrDistributor(0);
+    public Vector<Byte> dataBytes = new Vector<>();
 
     /*
      * 初始化块
@@ -90,13 +95,22 @@ public class Instruction {
     }
 
     /**
+     * 分配初始地址
+     *
+     * @param addr 地址base
+     */
+    public void initAddr(int addr) {
+        codeAddrDistributor = new AddrDistributor(addr);
+    }
+
+    /**
      * 默认采用非debug模式进行指令转换
      *
      * @param ins 输入的指令
      * @return 输出的32位机器码 用String类型表示
      * @throws Exception 指令转换存在异常
      */
-    public static String transform(String ins) throws Exception {
+    public String transform(String ins) throws Exception {
         return transform(ins, false);
     }
 
@@ -106,7 +120,7 @@ public class Instruction {
      * @return 输出的32位机器码 用String类型表示
      * @throws Exception 指令转换存在异常
      */
-    public static String transform(String ins, boolean isDebugMode) throws Exception {
+    public String transform(String ins, boolean isDebugMode) throws Exception {
 
         //分割操作符与操作数,注意顺序
         String operator = ins.split("[ \t]")[0];
@@ -126,7 +140,7 @@ public class Instruction {
         StringBuilder code = new StringBuilder();
         Vector<String> code_parts = ins_rule.get(operator);
         if (null == code_parts)
-            throw new Exception("Instruction format error - Operator expected");
+            throw new Exception("InsReader format error - Operator expected");
         if (isDebugMode)
             switch (ins_type.get(operator)) {
                 case "R":
@@ -156,7 +170,7 @@ public class Instruction {
                     code_part = twoSplit[0];
                     code.append(operandStandardize(operator, code_part, operands.get(pos)));
                 } catch (Exception e) {
-                    throw new Exception("Instruction format error - Not enough operands");
+                    throw new Exception("InsReader format error - Not enough operands");
                 }
             }
             if (isDebugMode)
@@ -166,6 +180,13 @@ public class Instruction {
             code.append("\b");
         if (operands.size() > maxPos + 1)
             throw new Exception("Syntax format error - Extra characters on line");
+        if (code.length() % 32 != 0)
+            throw new Exception("Internal logic error - Unhandled InsReader problem");
+
+        for (int i = 0; i < code.length()  / Byte.SIZE; i++) {
+            int byt = Integer.parseInt(code.substring(8 * i, 8 * i + 8));
+            dataBytes.add((byte) byt);
+        }
         return code.toString();
 
     }
@@ -182,14 +203,14 @@ public class Instruction {
      * @param operand     操作数的值
      * @return 标准二进制代码
      */
-    private static String operandStandardize(String operator, String operandType, String operand) throws Exception {
+    private String operandStandardize(String operator, String operandType, String operand) throws Exception {
 
         int num;
         int length = operand.length();
         //寄存器号
         if (operandType.startsWith("r")) {
             if (null == registers.get(operand))
-                throw new Exception("Instruction format error - Operand must be register");
+                throw new Exception("InsReader format error - Operand must be register");
             num = (registers.get(operand));
             String code = "00000" + Integer.toBinaryString(num);
             return code.substring(code.length() - 5, code.length());

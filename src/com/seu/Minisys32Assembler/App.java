@@ -1,6 +1,9 @@
 package com.seu.Minisys32Assembler;
 
-public class Main {
+import com.seu.Minisys32Assembler.io.AsmFile;
+import com.seu.Minisys32Assembler.io.CoeFile;
+
+public class App {
 
     public static void main(String[] args) {
         try {
@@ -8,10 +11,10 @@ public class Main {
                 System.out.println("Need at least one argument - InputFile");
                 return;
             }
-            ASMFile asmFile = new ASMFile(args[0]);
+            AsmFile asmFile = new AsmFile(args[0]);
 
-            //COEFile coeFile = new COEFile(asmFile);
-            //codeFile.writeFile(args[1]);
+            CoeFile coeFile = new CoeFile(asmFile);
+            //coeFile.writeFile(args[1]);
         } catch (Exception e) {
             e.printStackTrace();
         }

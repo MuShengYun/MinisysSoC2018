@@ -1,25 +1,25 @@
-package test.seu.Minisys32Assembler;
+package test.seu.Minisys32Assembler.io;
 
-import com.seu.Minisys32Assembler.ASMFile;
+import com.seu.Minisys32Assembler.io.AsmFile;
 import org.junit.Ignore;
 import org.junit.Test;
 
-public class ASMFileTest {
+public class AsmFileTest {
 
     @Test
     @Ignore
     public void readCode() throws Exception {
-        ASMFile asmFile = new ASMFile("input/assemblerTest.asm");
+        AsmFile asmFile = new AsmFile("input/assemblerTest.asm");
         //asmFile.instructionBytes.forEach(System.out::println);
-        //asmFile.fakeInsReader.dataBytes.forEach(System.out::println);
+        //asmFile.directorReader.dataBytes.forEach(System.out::println);
 
-        for (byte b : asmFile.instructionBytes) {
+        for (byte b : asmFile.insReader.dataBytes) {
             System.out.print(Integer.toHexString(b & 0xff | 0xffffff00).substring(6) + "\t");
         }
 
         System.out.println();
 
-        for (byte b : asmFile.fakeInsReader.dataBytes) {
+        for (byte b : asmFile.directorReader.dataBytes) {
             System.out.print(Integer.toHexString(b & 0xff | 0xffffff00).substring(6) + "\t");
         }
     }

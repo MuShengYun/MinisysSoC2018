@@ -1,18 +1,18 @@
-package test.seu.Minisys32Assembler;
+package test.seu.Minisys32Assembler.ins;
 
-import com.seu.Minisys32Assembler.FakeInsReader;
+import com.seu.Minisys32Assembler.ins.DirectorReader;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 
 import java.util.Vector;
 
-public class FakeInsReaderTest {
+public class DirectorReaderTest {
 
     @Test
     public void transDataDefine() {
         try {
-            FakeInsReader fakeInsReader = new FakeInsReader();
+            DirectorReader directorReader = new DirectorReader();
 
             StringBuilder fact = new StringBuilder();
             StringBuilder expect = new StringBuilder();
@@ -50,9 +50,9 @@ public class FakeInsReaderTest {
             expect.append("00000000");
 
             for (String dataDef : dataDefs) {
-                fakeInsReader.readDataDefine(dataDef);
+                directorReader.readDataDefine(dataDef);
             }
-            for (byte b : fakeInsReader.dataBytes) {
+            for (byte b : directorReader.dataBytes) {
                 fact.append(Integer.toHexString(b & 0xff | 0xffffff00).substring(6));
                 //System.out.print(Integer.toHexString(b & 0xff | 0xffffff00).substring(6) + "\t");
             }
