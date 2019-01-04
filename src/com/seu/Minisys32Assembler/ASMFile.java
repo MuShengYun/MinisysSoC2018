@@ -153,9 +153,17 @@ public class ASMFile {
                 if (ins.contains(label))
                     ins = ins.replace(label, codeLabels.get(label).toString());
             }
-            Integer ins_int = Integer.parseUnsignedInt(Instruction.transform(ins), 2);
-            for (int i = 0; i < Integer.SIZE / Byte.SIZE; i++) {
-                instructionBytes.add((byte) (ins_int >> (Integer.SIZE - Byte.SIZE * i - Byte.SIZE)));
+            try {
+                String ins_str = Instruction.transform(ins);
+                if (ins_str.length() % 32 != 0)
+                    throw new Exception("Internal logic error - Unhandled Instruction problem");
+
+                for (int i = 0; i < ins_str.length()  / Byte.SIZE; i++) {
+                    int byt = Integer.parseInt(ins_str.substring(8 * i, 8 * i + 8));
+                    instructionBytes.add((byte) byt);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
 

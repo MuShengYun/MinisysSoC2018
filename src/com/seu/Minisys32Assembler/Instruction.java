@@ -12,13 +12,15 @@ import java.util.Vector;
  * <p>
  * 包含一个静态方法transform()
  * 应用汇编语言规则，将指令转换为机器码
+ * 能翻译57条Mip指令，见@Minisys-1A 57条指令集与机器码与扩展宏指令对照表.txt
+ * 以及扩展指令5个
  *
  * @author XU CHENGZHUO
  * @author ZHANG BINGXI
  */
 public class Instruction {
 
-    public static HashMap<String, Character> ins_type = new HashMap<>();
+    public static HashMap<String, String> ins_type = new HashMap<>();
     private static HashMap<String, Vector<String>> ins_rule = new HashMap<>();
     public static HashMap<String, Integer> registers = new HashMap<>();
 
@@ -32,16 +34,14 @@ public class Instruction {
 
         try {
             BufferedReader reader;
-            reader = new BufferedReader(new FileReader("input/Minisys-1A 57条指令集与机器码对照表.txt"));
+            reader = new BufferedReader(new FileReader("input/Minisys-1A 57条指令集与扩展宏指令机器码对照表.txt"));
             reader.readLine();
 
             String line;
-            Character thisType = 'R';
-            Character nextType = 'I';
+            String insType = "";
             while ((line = reader.readLine()) != null) {
-                if (line.startsWith(nextType.toString())) {
-                    thisType = nextType;
-                    nextType = 'J';
+                if (line.startsWith("-")) {
+                    insType = line.substring(1).trim();
                     continue;
                 }
                 String operator = line.split("\t")[0];
@@ -51,7 +51,7 @@ public class Instruction {
                     if (!split.trim().isEmpty())
                         operands.add(split.trim());
                 }
-                ins_type.put(operator, thisType);
+                ins_type.put(operator, insType);
                 ins_rule.put(operator, operands);
             }
 
@@ -129,15 +129,17 @@ public class Instruction {
             throw new Exception("Instruction format error - Operator expected");
         if (isDebugMode)
             switch (ins_type.get(operator)) {
-                case 'R':
+                case "R":
                     code.append("op\t\trs\t\trt\t\trd\t\tshamt\tfunct\n");
                     break;
-                case 'I':
+                case "I":
                     code.append("op\trs\t\trt\t\timmediate\\offset\n");
                     break;
-                case 'J':
+                case "J":
                     code.append("op\taddress\n");
                     break;
+                case "EX":
+                    code.append("");
             }
 
         int maxPos = 0;

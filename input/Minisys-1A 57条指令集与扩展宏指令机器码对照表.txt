@@ -1,4 +1,4 @@
-R
+-R
 add	000000	rs(1)	rt(2)	rd(0)	00000	100000
 addu	000000	rs(1)	rt(2)	rd(0)	00000	100001
 sub	000000	rs(1)	rt(2)	rd(0)	00000	100010
@@ -30,7 +30,7 @@ jalr	000000	rs(1)	00000	rd(0)	00000	001001
 break	000000	code(0)	001101
 syscall	000000	code(0)	001100
 eret	000000	1000 0000 0000 0000 0000	011000
-I
+-I
 addi	001000	rs(1)	rt(0)	immediate(2)
 addiu	001001	rs(1)	rt(0)	immediate(2)
 andi	001100	rs(1)	rt(0)	immediate(2)
@@ -55,6 +55,13 @@ bgezal	000001	rs(0)	10001	offset(1)
 bltzal	000001	rs(0)	10000	offset(1)
 slti	001010	rs(1)	rt(0)	immediate(2)
 sltiu	001011	rs(1)	rt(0)	immediate(2)
-J
+-J
 j	000010	address(0)
 jal	000011	address(0)
+-EX
+push    101011  $sp rt(0)   0000000000000000    001000  $sp $sp 0000000000000100
+pop 001000  $sp $sp 1111111111111100    100011  $sp rt(0) 0000000000000000
+jg  000000	rs(1)	rt(0)	$at	00000	101010  000101	$at	$0	offset(2)
+jle 000000	rs(1)	rt(0)	$at	00000	101010  000100	$at	$0	offset(2)
+jl  000000	rt(0)	rs(1)	$at	00000	101010  000101	$at	$0	offset(2)
+jl  000000	rt(0)	rs(1)	$at	00000	101010  000100	$at	$0	offset(2)
