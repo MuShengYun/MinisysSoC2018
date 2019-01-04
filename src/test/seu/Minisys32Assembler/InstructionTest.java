@@ -72,8 +72,11 @@ public class InstructionTest {
         instructions.add("bltzal $a1,10");
         instructions.add("slti $a1,$a0,10");
         instructions.add("sltiu $a1,$a0,0x0A");
-
         instructions.add("jal 1024");
+
+        instructions.add("push $7");
+        instructions.add("pop $7");
+        instructions.add("jg $2,$3,0xffff");
 
         Vector<String> fact = new Vector<>();
 
@@ -113,20 +116,14 @@ public class InstructionTest {
         expect.add("00000000100001010011000000000111");//srav $a2,$a1,$a0
 
 
-        /**correct
-         * */
         expect.add("00000000101000000000000000001000");//jr $a1
-
-
-        /**todo:rs,rt,td逻辑顺序错误
-         * */
         expect.add("00000000100000000010100000001001");//jalr $a1,$a0
 
 
         /**todo:code字段内容
          * */
-        //expect.add("");//todo:break
-        //expect.add("");//todo:syscall
+        //expect.add("");//break
+        //expect.add("");//syscall
         expect.add("00000010000000000000000000011000");//eret
 
 
@@ -136,15 +133,8 @@ public class InstructionTest {
         expect.add("00110000101001100000000000001010");//andi $a2,$a1,10
         expect.add("00110100101001100000000000001010");//ori $a2,$a1,10
         expect.add("00111000101001100000000000001010");//xori $a2,$a1,10
-
-
-        /**correct
-         * */
         expect.add("00111100000001010000000000001010");//lui $a1,10
 
-
-        /**todo:rs,rt,td逻辑顺序错误
-         * */
         expect.add("10000000100001010000000000001010");//lb $a1,10($a0)
         expect.add("10010000100001010000000000001010");//lbu $a1,10($a0)
         expect.add("10000100100001010000000000001010");//lh $a1,10($a0)
@@ -155,15 +145,9 @@ public class InstructionTest {
         expect.add("10101100100001010000000000001010");//sw $a1,10($a0)
 
 
-        /**
-         * beq,bne的顺序是正序的，注意不要改反
-         * */
         expect.add("00010000101001000000000000001010");//beq $a1,$a0,10
         expect.add("00010100101001000000000000001010");//bne $a1,$a0,10
 
-
-        /**correct
-         * */
         expect.add("00000100101000010000000000001010");//bgez $a1,10
         expect.add("00011100101000000000000000001010");//bgtz $a1,10
         expect.add("00011000101000000000000000001010");//blez $a1,10
@@ -171,16 +155,16 @@ public class InstructionTest {
         expect.add("00000100101100010000000000001010");//bgezal $a1,10
         expect.add("00000100101100000000000000001010");//bltzal $a1,10
 
-
-        /**todo:rs,rt,td逻辑顺序错误
-         * */
         expect.add("00101000100001010000000000001010");//slti $a1,$a0,10
         expect.add("00101100100001010000000000001010");//sltiu $a1,$a0,10
 
         expect.add("00001100000000000000000100000000");//jal 1024
 
-
         try {
+        expect.add(Instruction.transform("sw $7,0($sp)") +Instruction.transform("addi $sp,$sp,4"));
+        expect.add(Instruction.transform("addi $sp,$sp,-4")+Instruction.transform("lw $7,0($sp)"));
+        expect.add(Instruction.transform("slt $1,$3,$2")+Instruction.transform("bne $1,$0,-1"));
+
             for (String instruction : instructions) {
                 fact.add(Instruction.transform(instruction));
             }
