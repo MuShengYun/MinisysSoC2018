@@ -44,7 +44,7 @@ public class Instruction {
                     insType = line.substring(1).trim();
                     continue;
                 }
-                String operator = line.split("\t")[0];
+                String operator = line.split("[ \t]")[0];
                 Vector<String> operands = new Vector<>();
                 String[] splits = line.replaceFirst(operator, "").split("[ \t]+");
                 for (String split : splits) {
@@ -146,7 +146,9 @@ public class Instruction {
         for (String code_part : code_parts) {
             if (code_part.matches("[0-1]*")) {
                 code.append(code_part);
-            } else {
+            } else if (code_part.startsWith("$"))
+                code.append(operandStandardize(operator, "r", code_part));
+            else {
                 try {
                     String[] twoSplit = code_part.split("[()]");
                     int pos = Integer.parseInt(twoSplit[1]);
@@ -185,7 +187,7 @@ public class Instruction {
         int num;
         int length = operand.length();
         //寄存器号
-        if (operandType.equals("rs") || operandType.equals("rt") || operandType.equals("rd")) {
+        if (operandType.startsWith("r")) {
             if (null == registers.get(operand))
                 throw new Exception("Instruction format error - Operand must be register");
             num = (registers.get(operand));
