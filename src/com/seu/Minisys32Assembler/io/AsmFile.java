@@ -19,6 +19,7 @@ import java.util.Vector;
 public class AsmFile {
 
     private BufferedReader reader;
+    private int lineCount = 0;
 
     /*Data*/
     public DirectorReader directorReader = new DirectorReader();
@@ -62,7 +63,7 @@ public class AsmFile {
 
         try {
             do {
-                line = reader.readLine().trim();
+                line = readLine().trim();
             } while ((!line.startsWith(".data") && !line.startsWith(".DATA")));
         } catch (IOException e) {
             throw new Exception("Program format error - Data segment unfounded");
@@ -77,7 +78,7 @@ public class AsmFile {
             }
 
         try {
-            line = reader.readLine().trim();
+            line = readLine().trim();
             while (!line.startsWith(".text") && !line.startsWith(".TEXT")) {
                 String dataDef = line.split("#", 2)[0].toLowerCase().trim();
                 //判断本行是否为空或只有注释
@@ -93,7 +94,7 @@ public class AsmFile {
                     memonis.put(memoni, directorReader.readDataDefine(dataDef));
                 } else
                     directorReader.readDataDefine(dataDef);
-                line = reader.readLine().trim();
+                line = readLine().trim();
             }
         } catch (IOException e) {
             throw new Exception("Program format error - Code segment unfounded");
@@ -107,7 +108,7 @@ public class AsmFile {
                 throw new Exception("Number format error - Unidentified address");
             }
 
-        while ((line = reader.readLine()) != null) {
+        while ((line = readLine()) != null) {
             String ins = line.split("#", 2)[0].toLowerCase().trim();
             //判断本行是否为空或只有注释
             if (ins.isEmpty() || ins.startsWith("#")) continue;
@@ -156,6 +157,11 @@ public class AsmFile {
             }
         }
 
+    }
+
+    private String readLine() throws IOException {
+        lineCount++;
+        return reader.readLine();
     }
 
     private void checkNaming(String symbol) throws Exception {

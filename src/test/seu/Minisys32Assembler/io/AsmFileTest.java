@@ -8,12 +8,12 @@ public class AsmFileTest {
 
     @Test
     @Ignore
-    public void readCode() throws Exception {
-        AsmFile asmFile = new AsmFile("input/assemblerTest.asm");
+    public void asmFileTest() throws Exception {
+        AsmFile asmFile = new AsmFile("resource/assemblerTest.asm");
         //asmFile.instructionBytes.forEach(System.out::println);
-        //asmFile.directorReader.dataBytes.forEach(System.out::println);
+        //asmFile.directorReader.insBytes.forEach(System.out::println);
 
-        for (byte b : asmFile.insReader.dataBytes) {
+        for (byte b : asmFile.insReader.insBytes) {
             System.out.print(Integer.toHexString(b & 0xff | 0xffffff00).substring(6) + "\t");
         }
 

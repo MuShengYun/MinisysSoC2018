@@ -27,7 +27,7 @@ public class InsReader {
     public static HashMap<String, Integer> registers = new HashMap<>();
 
     public AddrDistributor codeAddrDistributor = new AddrDistributor(0);
-    public Vector<Byte> dataBytes = new Vector<>();
+    public Vector<Byte> insBytes = new Vector<>();
 
     /*
      * 初始化块
@@ -39,7 +39,7 @@ public class InsReader {
 
         try {
             BufferedReader reader;
-            reader = new BufferedReader(new FileReader("input/Minisys-1A 57条指令集与扩展宏指令机器码对照表.txt"));
+            reader = new BufferedReader(new FileReader("resource/Minisys-1A 57条指令集与扩展宏指令机器码对照表.txt"));
             reader.readLine();
 
             String line;
@@ -185,7 +185,7 @@ public class InsReader {
 
         for (int i = 0; i < code.length()  / Byte.SIZE; i++) {
             int byt = Integer.parseInt(code.substring(8 * i, 8 * i + 8));
-            dataBytes.add((byte) byt);
+            insBytes.add((byte) byt);
         }
         return code.toString();
 
