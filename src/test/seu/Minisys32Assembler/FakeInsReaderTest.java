@@ -25,16 +25,13 @@ public class FakeInsReaderTest {
             dataDefs.add(".half 0x77c,0");
             dataDefs.add(".word 0xd");
             dataDefs.add(".ascii \"hello\0\",\"a\"");
+            dataDefs.add(".align 2");
             dataDefs.add(".asciiz \"hello\"");
             dataDefs.add(".byte 6:3,4:2,6");
             dataDefs.add(".byte 9999");
             dataDefs.add(".ascii \"abc\":3");
             dataDefs.add(".asciiz \"a:c\"");
             dataDefs.add(".space 4");
-            {
-                //dataDefs.add(".align 2");
-                //dataDefs.add(".byte 3,2,1");
-            }
 
             expect.append("ff00000000550055");
             expect.append("070ffd00");
@@ -44,6 +41,7 @@ public class FakeInsReaderTest {
             expect.append("7c070000");
             expect.append("0d000000");
             expect.append("68656c6c6f0061");
+            expect.append("00");
             expect.append("68656c6c6f00");
             expect.append("060606040406");
             expect.append("0f");
