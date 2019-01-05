@@ -82,7 +82,10 @@ public class AsmFile {
             while (!line.startsWith(".text") && !line.startsWith(".TEXT")) {
                 String dataDef = line.split("#", 2)[0].toLowerCase().trim();
                 //判断本行是否为空或只有注释
-                if (dataDef.isEmpty() || dataDef.startsWith("#")) continue;
+                if (dataDef.isEmpty() || dataDef.startsWith("#")) {
+                    line = reader.readLine().trim();
+                    continue;
+                }
                 if (dataDef.contains(":")) {
                     //以冒号分隔助记符定义
                     String[] splits = dataDef.split(":", 2);
