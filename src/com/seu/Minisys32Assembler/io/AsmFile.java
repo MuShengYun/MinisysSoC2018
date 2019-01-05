@@ -160,7 +160,7 @@ public class AsmFile {
     }
 
     private String readLine() throws IOException {
-        lineCount++;
+        lineCount ++;
         return reader.readLine();
     }
 
