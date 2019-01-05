@@ -1,5 +1,5 @@
 .data 0x0dfc
-    
+
 .text 0x0000
 start:  addi    $sp,$zero,4000      #初始化$sp寄存器
         addi    $t0,$zero,0

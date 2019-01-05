@@ -69,38 +69,32 @@ public class CoeFile {
             dataWriters[i].write(head());
         }
         //轮流输出字节
-        for (int i = 0; i < (ram_size - 4) * numOfFiles && i < insBytes.size(); i++) {
-            BufferedWriter dataWriter = dataWriters[(i >> 2) % numOfFiles];
-            dataWriter.write(byt(insBytes.get(i)));
-            if (i % 4 == 3) {
-                dataWriter.write(",");
-                dataWriter.newLine();
-            }
+        for (int i = 0; i < ram_size * numOfFiles - 4 && i < dataBytes.size(); i++) {
+            BufferedWriter dataWriter = dataWriters[i % numOfFiles];
+            dataWriter.write(byt(dataBytes.get(i)));
+            dataWriter.write(",");
+            dataWriter.newLine();
         }
         //如果文件长度不足，补0
-        for (int i = insBytes.size(); i < (ram_size - 4) * numOfFiles; i++) {
-            BufferedWriter dataWriter = dataWriters[(i >> 2) % numOfFiles];
+        for (int i = dataBytes.size(); i < ram_size * numOfFiles - 4; i++) {
+            BufferedWriter dataWriter = dataWriters[i % numOfFiles];
             dataWriter.write(byt((byte) 0));
-            if (i % 4 == 3) {
-                dataWriter.write(",");
-                dataWriter.newLine();
-            }
+            dataWriter.write(",");
+            dataWriter.newLine();
         }
         //处理最后一个字后的分号问题
-        for (int i = (ram_size - 4) * numOfFiles; i < ram_size * numOfFiles; i++) {
-            BufferedWriter dataWriter = dataWriters[(i >> 2) % numOfFiles];
-            if (i < insBytes.size()) dataWriter.write(byt(insBytes.get(i)));
+        for (int i = ram_size * numOfFiles - 4; i < ram_size * numOfFiles; i++) {
+            BufferedWriter dataWriter = dataWriters[i % numOfFiles];
+            if (i < dataBytes.size()) dataWriter.write(byt(dataBytes.get(i)));
             else dataWriter.write(byt((byte) 0));
-            if (i % 4 == 3) {
-                dataWriter.write(";");
-                dataWriter.close();
-            }
+            dataWriter.write(";");
+            dataWriter.close();
         }
     }
 
     private String head() {
-        return "memory_initialization_radix = 16\n"
-                + "memory_initialization_vector = \n";
+        return "memory_initialization_radix = 16;\r\n"
+                + "memory_initialization_vector = \r\n";
     }
 
     private String byt(Byte b) {
