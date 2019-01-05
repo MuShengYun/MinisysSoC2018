@@ -163,15 +163,14 @@ public class InsReader {
             } else if (code_part.startsWith("$"))
                 code.append(operandStandardize(operator, "r", code_part));
             else {
-                try {
-                    String[] twoSplit = code_part.split("[()]");
-                    int pos = Integer.parseInt(twoSplit[1]);
-                    if (pos > maxPos) maxPos = pos;
-                    code_part = twoSplit[0];
-                    code.append(operandStandardize(operator, code_part, operands.get(pos)));
-                } catch (Exception e) {
-                    throw new Exception("InsReader format error - Not enough operands");
-                }
+
+                String[] twoSplit = code_part.split("[()]");
+                int pos = Integer.parseInt(twoSplit[1]);
+                if (pos > maxPos) maxPos = pos;
+                code_part = twoSplit[0];
+                if (pos >= operands.size()) throw new Exception("InsReader format error - Not enough operands");
+                code.append(operandStandardize(operator, code_part, operands.get(pos)));
+
             }
             if (isDebugMode)
                 code.append("\t");
@@ -183,7 +182,7 @@ public class InsReader {
         if (code.length() % 32 != 0)
             throw new Exception("Internal logic error - Unhandled InsReader problem");
 
-        for (int i = 0; i < code.length()  / Byte.SIZE; i++) {
+        for (int i = 0; i < code.length() / Byte.SIZE; i++) {
             int byt = Integer.parseInt(code.substring(8 * i, 8 * i + 8));
             dataBytes.add((byte) byt);
         }
@@ -251,7 +250,7 @@ public class InsReader {
                         break;
                     default:
                         if (operand.startsWith("0x"))
-                            num = Integer.parseInt(operand.substring(2), 16);
+                            num = Integer.parseUnsignedInt(operand.substring(2), 16);
                         else num = Integer.parseInt(operand);
                 }
             } catch (NumberFormatException e) {
