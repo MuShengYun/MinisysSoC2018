@@ -2273,7 +2273,7 @@ public class Parser {
                     break;
                 }
             } catch (IndexOutOfBoundsException e) {
-                yyerror();
+                yyerror("");
                 return;
             } catch (Exception e) {
                 System.err.println("fatal error");
@@ -2282,9 +2282,8 @@ public class Parser {
         }
     }
 
-    void yyerror()
-    {
-
+    void yyerror(String s) {
+        System.err.println("line " + lexer.line + ": " + s);
     }
 }
 
