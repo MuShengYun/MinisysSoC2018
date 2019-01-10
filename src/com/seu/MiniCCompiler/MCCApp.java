@@ -1,6 +1,4 @@
-package com.seu.MinusCCompiler;
-
-import java.io.IOException;
+package com.seu.MiniCCompiler;
 
 public class MCCApp {
 
