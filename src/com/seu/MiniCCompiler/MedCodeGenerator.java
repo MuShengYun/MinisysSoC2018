@@ -1,7 +1,5 @@
 package com.seu.MiniCCompiler;
 
-import org.omg.PortableServer.THREAD_POLICY_ID;
-
 import java.util.Vector;
 
 /**
@@ -14,27 +12,56 @@ public class MedCodeGenerator {
     /**
      * 三地址代码类
      * 用四元式表示
+     * 包含以下几种种类
+     * i = j [Integer op = '=', String/Integer arg1 = j, arg2 = null, String result = i ]
+     * result = arg1 op arg2
      */
     class ThreeAddrCode {
         Integer op;
-        Integer arg1;
-        Integer arg2;
-        Integer result;
+        Object arg1;
+        Object arg2;
+        String result;
 
-        ThreeAddrCode(Integer op_, Integer arg1_, Integer arg2_, Integer result_) {
+        ThreeAddrCode(Integer op_, Object arg1_, Object arg2_, String result_) {
             op = op_;
             arg1 = arg1_;
             arg2 = arg2_;
             result = result_;
         }
-    }
 
-
-    public void gen(int... array) {
-
-        //result = arg1 op arg2
-        if ((array.length == 5) && (array[1] == '=')) {
-            medCode.add(new ThreeAddrCode(array[3],array[2],array[4],array[0]));
+        @Override
+        public String toString() {
+            return "ThreeAddrCode{" +
+                    "op=" + op +
+                    ", arg1=" + arg1 +
+                    ", arg2=" + arg2 +
+                    ", result=" + result +
+                    '}';
         }
     }
+
+
+    public void gen(Object... array) {
+
+        //i = j [Integer op = '=', String/Integer arg1 = j, arg2 = null, String result = i ]
+        if (array.length == 3 && (char) array[1] == '=') {
+            medCode.add(new ThreeAddrCode((int) '=', array[2], null, (String) array[0]));
+        }
+
+        //result = arg1 op arg2
+        /*if ((array.length == 5) && (array[1] == '=')) {
+            medCode.add(new ThreeAddrCode(array[3],array[2],array[4],array[0]));
+        }*/
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder("Generated intermediate code as follow:\n");
+        for(ThreeAddrCode code : medCode) {
+            builder.append(code);
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
 }
