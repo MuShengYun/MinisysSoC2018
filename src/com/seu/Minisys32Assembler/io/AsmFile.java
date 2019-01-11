@@ -146,11 +146,11 @@ public class AsmFile {
         for (String ins : instructions) {
             for (String memoni : memonis.keySet()) {
                 if (ins.contains(memoni))
-                    ins = ins.replace(memoni, memonis.get(memoni).toString());
+                    ins = ins.replaceAll("(?<!\\w)" + memoni + "(?!\\w)", memonis.get(memoni).toString());
             }
             for (String label : codeLabels.keySet()) {
                 if (ins.contains(label))
-                    ins = ins.replace(label, codeLabels.get(label).toString());
+                    ins = ins.replaceAll("(?<!\\w)" + label + "(?!\\w)", codeLabels.get(label).toString());
             }
             try {
                 Address currentAddress = insReader.codeAddrDistributor.distributeAddress(4);
@@ -163,7 +163,7 @@ public class AsmFile {
     }
 
     private String readLine() throws IOException {
-        lineCount ++;
+        lineCount++;
         return reader.readLine();
     }
 
