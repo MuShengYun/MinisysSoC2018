@@ -1,4 +1,4 @@
-package com.seu.MiniCCompiler;
+package com.seu.MiniCCompiler.gen;
 
 import com.seu.MiniCCompiler.sem.Symbol;
 
@@ -7,7 +7,7 @@ import java.util.Vector;
 /**
  * 中间代码生成器类
  */
-public class MedCodeGenerator {
+public class CodeGenerator {
 
     Vector<ThreeAddrCode> medCode = new Vector<>();
 
@@ -16,7 +16,8 @@ public class MedCodeGenerator {
      * 用四元式表示
      * 包含以下几种种类
      * i = j [Integer op = '=', Symbol/Integer arg1 = j, arg2 = null, Symbol result = i ]
-     * result = arg1 op arg2
+     * a = b op c [op, arg1 = b, arg2 = c, result = a ]
+     * ...
      */
     class ThreeAddrCode {
         Integer op;
@@ -56,7 +57,12 @@ public class MedCodeGenerator {
 
         //result = arg1 op arg2
         if ((array.length == 5) && (char) array[1] == '=') {
-            medCode.add(new ThreeAddrCode((int) (char) array[3], array[2], array[4], (Symbol) array[0]));
+            medCode.add(new ThreeAddrCode((int) array[3], array[2], array[4], (Symbol) array[0]));
+        }
+
+        //result = op arg1
+        if ((array.length == 4) && (char) array[1] == '=') {
+            medCode.add(new ThreeAddrCode((int) array[2], array[3], null, (Symbol) array[0]));
         }
     }
 

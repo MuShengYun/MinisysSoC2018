@@ -1,5 +1,6 @@
 package com.seu.MiniCCompiler;
 
+import com.seu.MiniCCompiler.gen.CodeGenerator;
 import com.seu.MiniCCompiler.sem.Attribute;
 import com.seu.MiniCCompiler.sem.Symbol;
 import com.seu.MiniCCompiler.sem.SymbolTable;
@@ -12,7 +13,7 @@ import java.util.Vector;
 
 public class Parser {
     Lexer lexer;
-    MedCodeGenerator generator = new MedCodeGenerator();
+    CodeGenerator generator = new CodeGenerator();
     Stack<SymbolTable> env = new Stack<>();
     SymbolTable top = new SymbolTable(env);
 
@@ -157,8 +158,8 @@ public class Parser {
             new Production(1, 6),
             new Production(16, 1),
             new Production(15, 5),
-            new Production(13, 1),
             new Production(13, 3),
+            new Production(13, 1),
             new Production(13, 3),
             new Production(13, 3),
             new Production(27, 3),
@@ -347,7 +348,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '|';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -417,7 +427,10 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        {parent.addr = newTemp(Tag.TYPE_INT);gen(parent.addr,'=',children[0].intValue);}
+        {
+            parent.var = newTemp(Tag.TYPE_INT);
+            gen(parent.var, '=', children[0].intValue);
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -431,7 +444,15 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '$';
+            Symbol arg = children[1].var;
+            Symbol s = newTemp(Tag.TYPE_BOOL);
+            if (checkType(s, arg)) {
+                parent.var = s;
+                gen(parent.var, '=', op, arg);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -459,7 +480,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        {checkType(children[0].addr,children[2].addr);parent.addr = newTemp(children[0].addr.type); gen(parent.addr, '=', children[0].addr, '-' ,children[2].addr);}
+        {
+            int op = (int) '-';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -487,7 +517,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.AND;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -501,7 +540,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        {checkType(children[0].addr,children[2].addr);parent.addr = newTemp(children[0].addr.type); gen(parent.addr, '=', children[0].addr, '+' ,children[2].addr);}
+        {
+            int op = (int) '+';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -543,7 +591,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        {checkType(children[0].addr,children[2].addr);parent.addr = newTemp(children[0].addr.type); gen(parent.addr, '=', children[0].addr, '/' ,children[2].addr);}
+        {
+            int op = (int) '/';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -557,7 +614,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.LSHIFT;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -633,6 +699,29 @@ public class Parser {
     }
     public void r30() {
         SyntaxTree temp = new SyntaxTree();
+        Node pNode = new Node("expr", "[expr, '^', expr]", temp);
+        temp.parent = pNode;
+        for (int i = 0; i < 3; i++) {
+            temp.nodes.insertElementAt(syntaxTree.nodes.lastElement(), 0);
+            syntaxTree.nodes.removeElementAt(syntaxTree.nodes.size() - 1);
+        }
+        Attribute parent = new Attribute();
+        Attribute[] children = temp.getChildAttributes();
+        {
+            int op = (int) '^';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
+        pNode.setAttribute(parent);
+        syntaxTree.nodes.add(pNode);
+    }
+    public void r31() {
+        SyntaxTree temp = new SyntaxTree();
         Node pNode = new Node("expr", "[IDENT]", temp);
         temp.parent = pNode;
         for (int i = 0; i < 1; i++) {
@@ -643,23 +732,9 @@ public class Parser {
         Attribute[] children = temp.getChildAttributes();
         {
             String name = children[0].text;
-            if(checkSymbol(name))
-                parent.addr = top.get(name);
+            if (checkSymbol(name))
+                parent.var = top.get(name);
         }
-        pNode.setAttribute(parent);
-        syntaxTree.nodes.add(pNode);
-    }
-    public void r31() {
-        SyntaxTree temp = new SyntaxTree();
-        Node pNode = new Node("expr", "[expr, '^', expr]", temp);
-        temp.parent = pNode;
-        for (int i = 0; i < 3; i++) {
-            temp.nodes.insertElementAt(syntaxTree.nodes.lastElement(), 0);
-            syntaxTree.nodes.removeElementAt(syntaxTree.nodes.size() - 1);
-        }
-        Attribute parent = new Attribute();
-        Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -673,7 +748,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.LE;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -687,7 +771,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.RSHIFT;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -715,7 +808,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        {checkType(children[0].addr,children[2].addr);parent.addr = newTemp(children[0].addr.type); gen(parent.addr, '=', children[0].addr, '%' ,children[2].addr);}
+        {
+            int op = (int) '%';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -757,7 +859,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.NE;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -887,7 +998,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '>';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -901,7 +1021,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.OR;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -915,7 +1044,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '<';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -929,7 +1067,9 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            gen(top.get(children[0].text), '=', children[2].var);
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -943,7 +1083,15 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '+';
+            Symbol arg = children[1].var;
+            Symbol s = newTemp(Tag.TYPE_BOOL);
+            if (checkType(s, arg)) {
+                parent.var = s;
+                gen(parent.var, '=', op, arg);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1041,7 +1189,15 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '!';
+            Symbol arg = children[1].var;
+            Symbol s = newTemp(Tag.TYPE_BOOL);
+            if (checkType(s, arg)) {
+                parent.var = s;
+                gen(parent.var, '=', op, arg);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1083,7 +1239,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.EQ;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1115,7 +1280,15 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '-';
+            Symbol arg = children[1].var;
+            Symbol s = newTemp(Tag.TYPE_BOOL);
+            if (checkType(s, arg)) {
+                parent.var = s;
+                gen(parent.var, '=', op, arg);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1157,7 +1330,9 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        {parent.addr = children[1].addr;}
+        {
+            parent.var = children[1].var;
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1255,7 +1430,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = Tag.GE;
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1283,7 +1467,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '&';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1311,7 +1504,15 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        if(children.length == 1) parent.text = children[0].text;
+        {
+            int op = (int) '~';
+            Symbol arg = children[1].var;
+            Symbol s = newTemp(Tag.TYPE_BOOL);
+            if (checkType(s, arg)) {
+                parent.var = s;
+                gen(parent.var, '=', op, arg);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1325,7 +1526,16 @@ public class Parser {
         }
         Attribute parent = new Attribute();
         Attribute[] children = temp.getChildAttributes();
-        {checkType(children[0].addr,children[2].addr);parent.addr = newTemp(children[0].addr.type); gen(parent.addr, '=', children[0].addr, '*' ,children[2].addr);}
+        {
+            int op = (int) '*';
+            Symbol arg1 = children[0].var;
+            Symbol arg2 = children[2].var;
+            int parentType = checkExpr(arg1, arg2, op);
+            if (parentType >= 0) {
+                parent.var = newTemp(parentType);
+                gen(parent.var, '=', arg1, op, arg2);
+            }
+        }
         pNode.setAttribute(parent);
         syntaxTree.nodes.add(pNode);
     }
@@ -1375,62 +1585,394 @@ public class Parser {
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 78));put((int) '+',new Parser.Entry(1, 78));put(Tag.OR,new Parser.Entry(1, 78));put((int) '*',new Parser.Entry(1, 78));put((int) ')',new Parser.Entry(1, 78));put((int) '&',new Parser.Entry(1, 78));put((int) '%',new Parser.Entry(1, 78));put(Tag.EQ,new Parser.Entry(1, 78));put((int) '>',new Parser.Entry(1, 78));put((int) '^',new Parser.Entry(1, 78));put(Tag.RSHIFT,new Parser.Entry(1, 78));put((int) '|',new Parser.Entry(1, 78));put((int) '<',new Parser.Entry(1, 78));put(Tag.LSHIFT,new Parser.Entry(1, 78));put(Tag.AND,new Parser.Entry(1, 78));put(Tag.NE,new Parser.Entry(1, 78));put(Tag.LE,new Parser.Entry(1, 78));put(Tag.GE,new Parser.Entry(1, 78));put((int) '/',new Parser.Entry(1, 78)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ')',new Parser.Entry(0, 422)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 47));put((int) '+',new Parser.Entry(1, 47));put(Tag.OR,new Parser.Entry(1, 47));put((int) '*',new Parser.Entry(1, 47));put((int) '&',new Parser.Entry(1, 47));put((int) '%',new Parser.Entry(1, 47));put(Tag.EQ,new Parser.Entry(1, 47));put((int) '>',new Parser.Entry(1, 47));put((int) '^',new Parser.Entry(1, 47));put(Tag.RSHIFT,new Parser.Entry(1, 47));put((int) '<',new Parser.Entry(1, 47));put((int) '|',new Parser.Entry(1, 47));put((int) ';',new Parser.Entry(1, 47));put(Tag.LSHIFT,new Parser.Entry(1, 47));put(Tag.AND,new Parser.Entry(1, 47));put(Tag.NE,new Parser.Entry(1, 47));put(Tag.LE,new Parser.Entry(1, 47));put(Tag.GE,new Parser.Entry(1, 47));put((int) '/',new Parser.Entry(1, 47)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 48));put((int) '+',new Parser.Entry(1, 48));put(Tag.OR,new Parser.Entry(1, 48));put((int) '*',new Parser.Entry(1, 48));put((int) '&',new Parser.Entry(1, 48));put((int) '%',new Parser.Entry(1, 48));put(Tag.EQ,new Parser.Entry(1, 48));put((int) '>',new Parser.Entry(1, 48));put((int) '^',new Parser.Entry(1, 48));put(Tag.RSHIFT,new Parser.Entry(1, 48));put((int) '|',new Parser.Entry(1, 48));put((int) '<',new Parser.Entry(1, 48));put((int) ';',new Parser.Entry(1, 48));put(Tag.LSHIFT,new Parser.Entry(1, 48));put(Tag.NE,new Parser.Entry(1, 48));put(Tag.AND,new Parser.Entry(1, 48));put(Tag.LE,new Parser.Entry(1, 48));put(Tag.GE,new Parser.Entry(1, 48));put((int) '/',new Parser.Entry(1, 48)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 75));put(Tag.OR,new Parser.Entry(1, 75));put((int) '+',new Parser.Entry(1, 75));put((int) '*',new Parser.Entry(1, 75));put((int) '&',new Parser.Entry(1, 75));put((int) '%',new Parser.Entry(1, 75));put(Tag.EQ,new Parser.Entry(1, 75));put((int) '>',new Parser.Entry(1, 75));put((int) '^',new Parser.Entry(1, 75));put(Tag.RSHIFT,new Parser.Entry(1, 75));put((int) '=',new Parser.Entry(1, 75));put((int) '|',new Parser.Entry(1, 75));put((int) '<',new Parser.Entry(1, 75));put(Tag.LSHIFT,new Parser.Entry(1, 75));put(Tag.AND,new Parser.Entry(1, 75));put(Tag.NE,new Parser.Entry(1, 75));put(Tag.LE,new Parser.Entry(1, 75));put(Tag.GE,new Parser.Entry(1, 75));put((int) '/',new Parser.Entry(1, 75)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 3));put(Tag.RETURN,new Parser.Entry(1, 3));put((int) '}',new Parser.Entry(1, 3));put((int) '{',new Parser.Entry(1, 3));put(Tag.IDENT,new Parser.Entry(1, 3));put(Tag.BREAK,new Parser.Entry(1, 3));put(Tag.ELSE,new Parser.Entry(1, 3));put(Tag.WHILE,new Parser.Entry(1, 3));put((int) '$',new Parser.Entry(1, 3));put(Tag.IF,new Parser.Entry(1, 3)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put(Tag.CONTINUE, new Parser.Entry(1, 3));
+            put(Tag.RETURN, new Parser.Entry(1, 3));
+            put((int) '}', new Parser.Entry(1, 3));
+            put((int) '{', new Parser.Entry(1, 3));
+            put(Tag.IDENT, new Parser.Entry(1, 3));
+            put(Tag.BREAK, new Parser.Entry(1, 3));
+            put(Tag.ELSE, new Parser.Entry(1, 3));
+            put(Tag.WHILE, new Parser.Entry(1, 3));
+            put((int) '$', new Parser.Entry(1, 3));
+            put(Tag.IF, new Parser.Entry(1, 3));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 14));put((int) ',',new Parser.Entry(1, 14));put((int) '+',new Parser.Entry(1, 14));put(Tag.OR,new Parser.Entry(1, 14));put((int) '*',new Parser.Entry(1, 14));put((int) ')',new Parser.Entry(1, 14));put((int) '&',new Parser.Entry(1, 14));put((int) '%',new Parser.Entry(1, 14));put(Tag.EQ,new Parser.Entry(1, 14));put(Tag.RSHIFT,new Parser.Entry(1, 14));put((int) '>',new Parser.Entry(1, 14));put((int) '^',new Parser.Entry(1, 14));put((int) '|',new Parser.Entry(1, 14));put((int) '<',new Parser.Entry(1, 14));put(Tag.LSHIFT,new Parser.Entry(1, 14));put(Tag.AND,new Parser.Entry(1, 14));put(Tag.NE,new Parser.Entry(1, 14));put(Tag.LE,new Parser.Entry(1, 14));put(Tag.GE,new Parser.Entry(1, 14));put((int) '/',new Parser.Entry(1, 14)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 32));put((int) '+',new Parser.Entry(1, 32));put(Tag.OR,new Parser.Entry(1, 32));put((int) '*',new Parser.Entry(1, 32));put((int) '&',new Parser.Entry(1, 32));put((int) '%',new Parser.Entry(1, 32));put(Tag.EQ,new Parser.Entry(1, 32));put(Tag.RSHIFT,new Parser.Entry(1, 32));put((int) '^',new Parser.Entry(1, 32));put((int) '>',new Parser.Entry(1, 32));put((int) '|',new Parser.Entry(1, 32));put((int) '<',new Parser.Entry(1, 32));put((int) ';',new Parser.Entry(1, 32));put(Tag.LSHIFT,new Parser.Entry(1, 32));put(Tag.NE,new Parser.Entry(1, 32));put(Tag.AND,new Parser.Entry(1, 32));put(Tag.LE,new Parser.Entry(1, 32));put(Tag.GE,new Parser.Entry(1, 32));put((int) '/',new Parser.Entry(1, 32)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '=',new Parser.Entry(0, 23)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 78));put((int) ',',new Parser.Entry(1, 78));put((int) '+',new Parser.Entry(1, 78));put(Tag.OR,new Parser.Entry(1, 78));put((int) '*',new Parser.Entry(1, 78));put((int) ')',new Parser.Entry(1, 78));put((int) '&',new Parser.Entry(1, 78));put((int) '%',new Parser.Entry(1, 78));put(Tag.EQ,new Parser.Entry(1, 78));put((int) '>',new Parser.Entry(1, 78));put((int) '^',new Parser.Entry(1, 78));put(Tag.RSHIFT,new Parser.Entry(1, 78));put((int) '|',new Parser.Entry(1, 78));put((int) '<',new Parser.Entry(1, 78));put(Tag.LSHIFT,new Parser.Entry(1, 78));put(Tag.AND,new Parser.Entry(1, 78));put(Tag.NE,new Parser.Entry(1, 78));put(Tag.LE,new Parser.Entry(1, 78));put(Tag.GE,new Parser.Entry(1, 78));put((int) '/',new Parser.Entry(1, 78)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 65));put(Tag.RETURN,new Parser.Entry(1, 65));put((int) '}',new Parser.Entry(1, 65));put((int) '{',new Parser.Entry(1, 65));put(Tag.IDENT,new Parser.Entry(1, 65));put(Tag.BREAK,new Parser.Entry(1, 65));put(Tag.WHILE,new Parser.Entry(1, 65));put((int) '$',new Parser.Entry(1, 65));put(Tag.IF,new Parser.Entry(1, 65)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 38));put((int) '+',new Parser.Entry(1, 38));put(Tag.OR,new Parser.Entry(1, 38));put((int) '*',new Parser.Entry(1, 38));put((int) '&',new Parser.Entry(1, 38));put((int) '%',new Parser.Entry(1, 38));put(Tag.EQ,new Parser.Entry(1, 38));put((int) '^',new Parser.Entry(1, 38));put((int) '>',new Parser.Entry(1, 38));put(Tag.RSHIFT,new Parser.Entry(1, 38));put((int) '=',new Parser.Entry(1, 38));put((int) '|',new Parser.Entry(1, 38));put((int) '<',new Parser.Entry(1, 38));put(Tag.LSHIFT,new Parser.Entry(1, 38));put(Tag.NE,new Parser.Entry(1, 38));put(Tag.AND,new Parser.Entry(1, 38));put(Tag.LE,new Parser.Entry(1, 38));put(Tag.GE,new Parser.Entry(1, 38));put((int) '/',new Parser.Entry(1, 38)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 384));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '>',new Parser.Entry(0, 206));put((int) '^',new Parser.Entry(0, 142));put((int) '|',new Parser.Entry(0, 124));put((int) '<',new Parser.Entry(0, 150));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '-',new Parser.Entry(0, 89));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 42));put((int) '}',new Parser.Entry(1, 42));put(Tag.RETURN,new Parser.Entry(1, 42));put((int) '{',new Parser.Entry(1, 42));put(Tag.IDENT,new Parser.Entry(1, 42));put(Tag.BREAK,new Parser.Entry(1, 42));put(Tag.ELSE,new Parser.Entry(1, 42));put(Tag.WHILE,new Parser.Entry(1, 42));put((int) '$',new Parser.Entry(1, 42));put(Tag.IF,new Parser.Entry(1, 42)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '+', new Parser.Entry(0, 319));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 384));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '>', new Parser.Entry(0, 206));
+            put((int) '^', new Parser.Entry(0, 142));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put((int) '-', new Parser.Entry(0, 89));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 51));put(Tag.OR,new Parser.Entry(1, 51));put((int) '+',new Parser.Entry(1, 51));put((int) '*',new Parser.Entry(1, 51));put((int) '&',new Parser.Entry(1, 51));put((int) '%',new Parser.Entry(1, 51));put(Tag.EQ,new Parser.Entry(1, 51));put(Tag.RSHIFT,new Parser.Entry(1, 51));put((int) '>',new Parser.Entry(1, 51));put((int) '^',new Parser.Entry(1, 51));put((int) '|',new Parser.Entry(1, 51));put((int) '<',new Parser.Entry(1, 51));put((int) ';',new Parser.Entry(1, 51));put(Tag.LSHIFT,new Parser.Entry(1, 51));put(Tag.NE,new Parser.Entry(1, 51));put(Tag.AND,new Parser.Entry(1, 51));put(Tag.LE,new Parser.Entry(1, 51));put(Tag.GE,new Parser.Entry(1, 51));put((int) '/',new Parser.Entry(1, 51)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put(Tag.CONTINUE, new Parser.Entry(1, 42));
+            put((int) '}', new Parser.Entry(1, 42));
+            put(Tag.RETURN, new Parser.Entry(1, 42));
+            put((int) '{', new Parser.Entry(1, 42));
+            put(Tag.IDENT, new Parser.Entry(1, 42));
+            put(Tag.BREAK, new Parser.Entry(1, 42));
+            put(Tag.ELSE, new Parser.Entry(1, 42));
+            put(Tag.WHILE, new Parser.Entry(1, 42));
+            put((int) '$', new Parser.Entry(1, 42));
+            put(Tag.IF, new Parser.Entry(1, 42));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 68));put(Tag.RETURN,new Parser.Entry(1, 68));put((int) '}',new Parser.Entry(1, 68));put((int) '{',new Parser.Entry(1, 68));put(Tag.IDENT,new Parser.Entry(1, 68));put(Tag.BREAK,new Parser.Entry(1, 68));put(Tag.WHILE,new Parser.Entry(1, 68));put((int) '$',new Parser.Entry(1, 68));put(Tag.IF,new Parser.Entry(1, 68)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '-', new Parser.Entry(0, 89));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 19));put((int) '+',new Parser.Entry(1, 19));put(Tag.OR,new Parser.Entry(1, 19));put((int) '*',new Parser.Entry(1, 19));put((int) '&',new Parser.Entry(1, 19));put((int) '%',new Parser.Entry(1, 19));put(Tag.EQ,new Parser.Entry(1, 19));put(Tag.RSHIFT,new Parser.Entry(1, 19));put((int) '^',new Parser.Entry(1, 19));put((int) '>',new Parser.Entry(1, 19));put((int) '|',new Parser.Entry(1, 19));put((int) '<',new Parser.Entry(1, 19));put((int) ';',new Parser.Entry(1, 19));put(Tag.LSHIFT,new Parser.Entry(1, 19));put(Tag.NE,new Parser.Entry(1, 19));put(Tag.AND,new Parser.Entry(1, 19));put(Tag.LE,new Parser.Entry(1, 19));put(Tag.GE,new Parser.Entry(1, 19));put((int) '/',new Parser.Entry(1, 19)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put((int) '-', new Parser.Entry(0, 32));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 9));put((int) ',',new Parser.Entry(1, 9));put(Tag.OR,new Parser.Entry(1, 9));put((int) '+',new Parser.Entry(1, 9));put((int) '*',new Parser.Entry(1, 9));put((int) ')',new Parser.Entry(1, 9));put((int) '&',new Parser.Entry(1, 9));put((int) '%',new Parser.Entry(1, 9));put(Tag.EQ,new Parser.Entry(1, 9));put((int) '^',new Parser.Entry(1, 9));put(Tag.RSHIFT,new Parser.Entry(1, 9));put((int) '>',new Parser.Entry(1, 9));put((int) '|',new Parser.Entry(1, 9));put((int) '<',new Parser.Entry(1, 9));put(Tag.LSHIFT,new Parser.Entry(1, 9));put(Tag.AND,new Parser.Entry(1, 9));put(Tag.NE,new Parser.Entry(1, 9));put(Tag.LE,new Parser.Entry(1, 9));put(Tag.GE,new Parser.Entry(1, 9));put((int) '/',new Parser.Entry(1, 9)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 61));put((int) '+',new Parser.Entry(1, 61));put(Tag.OR,new Parser.Entry(1, 61));put((int) '*',new Parser.Entry(1, 61));put((int) '&',new Parser.Entry(1, 61));put((int) '%',new Parser.Entry(1, 61));put(Tag.EQ,new Parser.Entry(1, 61));put((int) '>',new Parser.Entry(1, 61));put(Tag.RSHIFT,new Parser.Entry(1, 61));put((int) '^',new Parser.Entry(1, 61));put((int) ']',new Parser.Entry(1, 61));put((int) '<',new Parser.Entry(1, 61));put((int) '|',new Parser.Entry(1, 61));put(Tag.LSHIFT,new Parser.Entry(1, 61));put(Tag.NE,new Parser.Entry(1, 61));put(Tag.AND,new Parser.Entry(1, 61));put(Tag.LE,new Parser.Entry(1, 61));put(Tag.GE,new Parser.Entry(1, 61));put((int) '/',new Parser.Entry(1, 61)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 291)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 23));put(Tag.OR,new Parser.Entry(1, 23));put((int) '+',new Parser.Entry(1, 23));put((int) '*',new Parser.Entry(1, 23));put((int) ')',new Parser.Entry(1, 23));put((int) '&',new Parser.Entry(1, 23));put((int) '%',new Parser.Entry(1, 23));put(Tag.EQ,new Parser.Entry(1, 23));put((int) '^',new Parser.Entry(1, 23));put(Tag.RSHIFT,new Parser.Entry(1, 23));put((int) '>',new Parser.Entry(1, 23));put((int) '<',new Parser.Entry(1, 23));put((int) '|',new Parser.Entry(1, 23));put(Tag.LSHIFT,new Parser.Entry(1, 23));put(Tag.AND,new Parser.Entry(1, 23));put(Tag.NE,new Parser.Entry(1, 23));put(Tag.LE,new Parser.Entry(1, 23));put(Tag.GE,new Parser.Entry(1, 23));put((int) '/',new Parser.Entry(1, 23)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 6));put(Tag.RETURN,new Parser.Entry(1, 6));put((int) '}',new Parser.Entry(1, 6));put((int) '{',new Parser.Entry(1, 6));put(Tag.IDENT,new Parser.Entry(1, 6));put(Tag.BREAK,new Parser.Entry(1, 6));put(Tag.ELSE,new Parser.Entry(1, 6));put((int) '$',new Parser.Entry(1, 6));put(Tag.WHILE,new Parser.Entry(1, 6));put(Tag.IF,new Parser.Entry(1, 6)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 346));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put((int) '>',new Parser.Entry(0, 206));put((int) '^',new Parser.Entry(0, 142));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '<',new Parser.Entry(0, 150));put((int) '|',new Parser.Entry(0, 124));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '+', new Parser.Entry(0, 319));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 345));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put((int) '^', new Parser.Entry(0, 142));
+            put((int) '>', new Parser.Entry(0, 206));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 58));put(Tag.OR,new Parser.Entry(1, 58));put((int) '+',new Parser.Entry(1, 58));put((int) '*',new Parser.Entry(1, 58));put((int) '&',new Parser.Entry(1, 58));put((int) '%',new Parser.Entry(1, 58));put(Tag.EQ,new Parser.Entry(1, 58));put((int) '>',new Parser.Entry(1, 58));put((int) '^',new Parser.Entry(1, 58));put(Tag.RSHIFT,new Parser.Entry(1, 58));put((int) '|',new Parser.Entry(1, 58));put((int) '<',new Parser.Entry(1, 58));put((int) ';',new Parser.Entry(1, 58));put(Tag.LSHIFT,new Parser.Entry(1, 58));put(Tag.AND,new Parser.Entry(1, 58));put(Tag.NE,new Parser.Entry(1, 58));put(Tag.LE,new Parser.Entry(1, 58));put(Tag.GE,new Parser.Entry(1, 58));put((int) '/',new Parser.Entry(1, 58)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 323));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put((int) '>',new Parser.Entry(0, 206));put((int) '^',new Parser.Entry(0, 142));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '<',new Parser.Entry(0, 150));put((int) '|',new Parser.Entry(0, 124));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put((int) '+', new Parser.Entry(0, 319));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 323));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put((int) '^', new Parser.Entry(0, 142));
+            put((int) '>', new Parser.Entry(0, 206));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 48));put((int) ',',new Parser.Entry(1, 48));put((int) '+',new Parser.Entry(1, 48));put(Tag.OR,new Parser.Entry(1, 48));put((int) '*',new Parser.Entry(1, 48));put((int) ')',new Parser.Entry(1, 48));put((int) '&',new Parser.Entry(1, 48));put((int) '%',new Parser.Entry(1, 48));put(Tag.EQ,new Parser.Entry(1, 48));put((int) '>',new Parser.Entry(1, 48));put((int) '^',new Parser.Entry(1, 48));put(Tag.RSHIFT,new Parser.Entry(1, 48));put((int) '|',new Parser.Entry(1, 48));put((int) '<',new Parser.Entry(1, 48));put(Tag.LSHIFT,new Parser.Entry(1, 48));put(Tag.NE,new Parser.Entry(1, 48));put(Tag.AND,new Parser.Entry(1, 48));put(Tag.LE,new Parser.Entry(1, 48));put(Tag.GE,new Parser.Entry(1, 48));put((int) '/',new Parser.Entry(1, 48)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 52));put((int) ',',new Parser.Entry(1, 52));put((int) '+',new Parser.Entry(1, 52));put(Tag.OR,new Parser.Entry(1, 52));put((int) '*',new Parser.Entry(1, 52));put((int) ')',new Parser.Entry(1, 52));put((int) '&',new Parser.Entry(1, 52));put((int) '%',new Parser.Entry(1, 52));put(Tag.EQ,new Parser.Entry(1, 52));put((int) '^',new Parser.Entry(1, 52));put((int) '>',new Parser.Entry(1, 52));put(Tag.RSHIFT,new Parser.Entry(1, 52));put((int) '<',new Parser.Entry(1, 52));put((int) '|',new Parser.Entry(1, 52));put(Tag.LSHIFT,new Parser.Entry(1, 52));put(Tag.NE,new Parser.Entry(1, 52));put(Tag.AND,new Parser.Entry(1, 52));put(Tag.LE,new Parser.Entry(1, 52));put(Tag.GE,new Parser.Entry(1, 52));put((int) '/',new Parser.Entry(1, 52)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 73));put(Tag.OR,new Parser.Entry(1, 73));put((int) '+',new Parser.Entry(1, 73));put((int) '*',new Parser.Entry(1, 73));put((int) '&',new Parser.Entry(1, 73));put((int) '%',new Parser.Entry(1, 73));put(Tag.EQ,new Parser.Entry(1, 73));put((int) '^',new Parser.Entry(1, 73));put(Tag.RSHIFT,new Parser.Entry(1, 73));put((int) '>',new Parser.Entry(1, 73));put((int) '<',new Parser.Entry(1, 73));put((int) '|',new Parser.Entry(1, 73));put((int) ';',new Parser.Entry(1, 73));put(Tag.LSHIFT,new Parser.Entry(1, 73));put(Tag.NE,new Parser.Entry(1, 73));put(Tag.AND,new Parser.Entry(1, 73));put(Tag.LE,new Parser.Entry(1, 73));put(Tag.GE,new Parser.Entry(1, 73));put((int) '/',new Parser.Entry(1, 73)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 60));put(Tag.RETURN,new Parser.Entry(1, 60));put((int) '}',new Parser.Entry(1, 60));put((int) '{',new Parser.Entry(1, 60));put(Tag.IDENT,new Parser.Entry(1, 60));put(Tag.BREAK,new Parser.Entry(1, 60));put(Tag.WHILE,new Parser.Entry(1, 60));put((int) '$',new Parser.Entry(1, 60));put(Tag.IF,new Parser.Entry(1, 60)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.VOID,new Parser.Entry(0, 367));put(Tag.INT,new Parser.Entry(0, 83)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 31));put(Tag.OR,new Parser.Entry(1, 31));put((int) '+',new Parser.Entry(1, 31));put((int) '*',new Parser.Entry(1, 31));put((int) ')',new Parser.Entry(1, 31));put((int) '&',new Parser.Entry(1, 31));put((int) '%',new Parser.Entry(1, 31));put(Tag.EQ,new Parser.Entry(1, 31));put((int) '^',new Parser.Entry(1, 31));put((int) '>',new Parser.Entry(1, 31));put(Tag.RSHIFT,new Parser.Entry(1, 31));put((int) '|',new Parser.Entry(1, 31));put((int) '<',new Parser.Entry(1, 31));put(Tag.LSHIFT,new Parser.Entry(1, 31));put(Tag.AND,new Parser.Entry(1, 31));put(Tag.NE,new Parser.Entry(1, 31));put(Tag.LE,new Parser.Entry(1, 31));put(Tag.GE,new Parser.Entry(1, 31));put((int) '/',new Parser.Entry(1, 31)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put((int) '-', new Parser.Entry(0, 32));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 30));
+            put(Tag.OR, new Parser.Entry(1, 30));
+            put((int) '+', new Parser.Entry(1, 30));
+            put((int) '*', new Parser.Entry(1, 30));
+            put((int) ')', new Parser.Entry(1, 30));
+            put((int) '&', new Parser.Entry(1, 30));
+            put((int) '%', new Parser.Entry(1, 30));
+            put(Tag.EQ, new Parser.Entry(1, 30));
+            put((int) '^', new Parser.Entry(1, 30));
+            put((int) '>', new Parser.Entry(1, 30));
+            put(Tag.RSHIFT, new Parser.Entry(1, 30));
+            put((int) '|', new Parser.Entry(1, 30));
+            put((int) '<', new Parser.Entry(1, 30));
+            put(Tag.LSHIFT, new Parser.Entry(1, 30));
+            put(Tag.AND, new Parser.Entry(1, 30));
+            put(Tag.NE, new Parser.Entry(1, 30));
+            put(Tag.LE, new Parser.Entry(1, 30));
+            put(Tag.GE, new Parser.Entry(1, 30));
+            put((int) '/', new Parser.Entry(1, 30));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 34));put(Tag.RETURN,new Parser.Entry(1, 34));put((int) '}',new Parser.Entry(1, 34));put((int) '{',new Parser.Entry(1, 34));put(Tag.IDENT,new Parser.Entry(1, 34));put(Tag.BREAK,new Parser.Entry(1, 34));put(Tag.ELSE,new Parser.Entry(1, 34));put(Tag.WHILE,new Parser.Entry(1, 34));put((int) '$',new Parser.Entry(1, 34));put(Tag.IF,new Parser.Entry(1, 34)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 42));put((int) '}',new Parser.Entry(1, 42));put(Tag.RETURN,new Parser.Entry(1, 42));put((int) '{',new Parser.Entry(1, 42));put(Tag.IDENT,new Parser.Entry(1, 42));put(Tag.BREAK,new Parser.Entry(1, 42));put(Tag.WHILE,new Parser.Entry(1, 42));put((int) '$',new Parser.Entry(1, 42));put(Tag.IF,new Parser.Entry(1, 42)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put((int) '+',new Parser.Entry(0, 318));put(Tag.OR,new Parser.Entry(0, 260));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 370));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put((int) '^',new Parser.Entry(0, 142));put((int) '>',new Parser.Entry(0, 206));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '<',new Parser.Entry(0, 150));put((int) '|',new Parser.Entry(0, 124));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 51));put((int) '+',new Parser.Entry(0, 414));put(Tag.OR,new Parser.Entry(0, 157));put((int) '*',new Parser.Entry(0, 389));put((int) '&',new Parser.Entry(0, 205));put((int) '%',new Parser.Entry(0, 159));put(Tag.EQ,new Parser.Entry(0, 354));put((int) '^',new Parser.Entry(0, 307));put(Tag.RSHIFT,new Parser.Entry(0, 175));put((int) '>',new Parser.Entry(0, 336));put((int) '=',new Parser.Entry(0, 304));put((int) '<',new Parser.Entry(0, 194));put((int) '|',new Parser.Entry(0, 31));put(Tag.LSHIFT,new Parser.Entry(0, 49));put(Tag.AND,new Parser.Entry(0, 207));put(Tag.NE,new Parser.Entry(0, 59));put(Tag.LE,new Parser.Entry(0, 286));put(Tag.GE,new Parser.Entry(0, 248));put((int) '/',new Parser.Entry(0, 295)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 41));put(Tag.OR,new Parser.Entry(0, 287));put((int) '+',new Parser.Entry(0, 400));put((int) '*',new Parser.Entry(0, 352));put((int) '&',new Parser.Entry(0, 126));put((int) '%',new Parser.Entry(0, 144));put(Tag.EQ,new Parser.Entry(0, 365));put(Tag.RSHIFT,new Parser.Entry(0, 153));put((int) '>',new Parser.Entry(0, 288));put((int) '^',new Parser.Entry(0, 293));put((int) ']',new Parser.Entry(0, 180));put((int) '|',new Parser.Entry(0, 42));put((int) '<',new Parser.Entry(0, 182));put(Tag.LSHIFT,new Parser.Entry(0, 154));put(Tag.NE,new Parser.Entry(0, 78));put(Tag.AND,new Parser.Entry(0, 197));put(Tag.LE,new Parser.Entry(0, 275));put(Tag.GE,new Parser.Entry(0, 282));put((int) '/',new Parser.Entry(0, 309)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '+', new Parser.Entry(0, 319));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 370));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put((int) '^', new Parser.Entry(0, 142));
+            put((int) '>', new Parser.Entry(0, 206));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 51));
+            put(Tag.OR, new Parser.Entry(0, 157));
+            put((int) '+', new Parser.Entry(0, 413));
+            put((int) '*', new Parser.Entry(0, 389));
+            put((int) '&', new Parser.Entry(0, 205));
+            put((int) '%', new Parser.Entry(0, 159));
+            put(Tag.EQ, new Parser.Entry(0, 354));
+            put((int) '^', new Parser.Entry(0, 306));
+            put((int) '>', new Parser.Entry(0, 336));
+            put(Tag.RSHIFT, new Parser.Entry(0, 175));
+            put((int) '=', new Parser.Entry(0, 304));
+            put((int) '<', new Parser.Entry(0, 194));
+            put((int) '|', new Parser.Entry(0, 31));
+            put(Tag.LSHIFT, new Parser.Entry(0, 49));
+            put(Tag.NE, new Parser.Entry(0, 59));
+            put(Tag.AND, new Parser.Entry(0, 207));
+            put(Tag.LE, new Parser.Entry(0, 286));
+            put(Tag.GE, new Parser.Entry(0, 247));
+            put((int) '/', new Parser.Entry(0, 295));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put((int) '-', new Parser.Entry(0, 32));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 41));
+            put((int) '+', new Parser.Entry(0, 400));
+            put(Tag.OR, new Parser.Entry(0, 287));
+            put((int) '*', new Parser.Entry(0, 352));
+            put((int) '&', new Parser.Entry(0, 126));
+            put((int) '%', new Parser.Entry(0, 144));
+            put(Tag.EQ, new Parser.Entry(0, 365));
+            put((int) '>', new Parser.Entry(0, 288));
+            put(Tag.RSHIFT, new Parser.Entry(0, 153));
+            put((int) '^', new Parser.Entry(0, 293));
+            put((int) ']', new Parser.Entry(0, 179));
+            put((int) '<', new Parser.Entry(0, 181));
+            put((int) '|', new Parser.Entry(0, 42));
+            put(Tag.LSHIFT, new Parser.Entry(0, 154));
+            put(Tag.AND, new Parser.Entry(0, 197));
+            put(Tag.NE, new Parser.Entry(0, 78));
+            put(Tag.LE, new Parser.Entry(0, 275));
+            put(Tag.GE, new Parser.Entry(0, 282));
+            put((int) '/', new Parser.Entry(0, 309));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 75));put(Tag.OR,new Parser.Entry(1, 75));put((int) '+',new Parser.Entry(1, 75));put((int) '*',new Parser.Entry(1, 75));put((int) '&',new Parser.Entry(1, 75));put((int) '%',new Parser.Entry(1, 75));put(Tag.EQ,new Parser.Entry(1, 75));put((int) '>',new Parser.Entry(1, 75));put((int) '^',new Parser.Entry(1, 75));put(Tag.RSHIFT,new Parser.Entry(1, 75));put((int) '|',new Parser.Entry(1, 75));put((int) '<',new Parser.Entry(1, 75));put((int) ';',new Parser.Entry(1, 75));put(Tag.LSHIFT,new Parser.Entry(1, 75));put(Tag.AND,new Parser.Entry(1, 75));put(Tag.NE,new Parser.Entry(1, 75));put(Tag.LE,new Parser.Entry(1, 75));put(Tag.GE,new Parser.Entry(1, 75));put((int) '/',new Parser.Entry(1, 75)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 47));put((int) '+',new Parser.Entry(1, 47));put(Tag.OR,new Parser.Entry(1, 47));put((int) '*',new Parser.Entry(1, 47));put((int) '&',new Parser.Entry(1, 47));put((int) '%',new Parser.Entry(1, 47));put(Tag.EQ,new Parser.Entry(1, 47));put((int) '>',new Parser.Entry(1, 47));put((int) '^',new Parser.Entry(1, 47));put(Tag.RSHIFT,new Parser.Entry(1, 47));put((int) '=',new Parser.Entry(1, 47));put((int) '<',new Parser.Entry(1, 47));put((int) '|',new Parser.Entry(1, 47));put(Tag.LSHIFT,new Parser.Entry(1, 47));put(Tag.AND,new Parser.Entry(1, 47));put(Tag.NE,new Parser.Entry(1, 47));put(Tag.LE,new Parser.Entry(1, 47));put(Tag.GE,new Parser.Entry(1, 47));put((int) '/',new Parser.Entry(1, 47)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 47));put((int) ',',new Parser.Entry(1, 47));put((int) '+',new Parser.Entry(1, 47));put(Tag.OR,new Parser.Entry(1, 47));put((int) '*',new Parser.Entry(1, 47));put((int) ')',new Parser.Entry(1, 47));put((int) '&',new Parser.Entry(1, 47));put((int) '%',new Parser.Entry(1, 47));put(Tag.EQ,new Parser.Entry(1, 47));put((int) '>',new Parser.Entry(1, 47));put((int) '^',new Parser.Entry(1, 47));put(Tag.RSHIFT,new Parser.Entry(1, 47));put((int) '<',new Parser.Entry(1, 47));put((int) '|',new Parser.Entry(1, 47));put(Tag.LSHIFT,new Parser.Entry(1, 47));put(Tag.AND,new Parser.Entry(1, 47));put(Tag.NE,new Parser.Entry(1, 47));put(Tag.LE,new Parser.Entry(1, 47));put(Tag.GE,new Parser.Entry(1, 47));put((int) '/',new Parser.Entry(1, 47)); }} );
@@ -1445,33 +1987,203 @@ public class Parser {
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ',',new Parser.Entry(1, 67));put((int) '[',new Parser.Entry(0, 116));put((int) ')',new Parser.Entry(1, 67)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 24));put((int) '+',new Parser.Entry(1, 24));put(Tag.OR,new Parser.Entry(1, 24));put((int) '*',new Parser.Entry(1, 24));put((int) '&',new Parser.Entry(1, 24));put((int) '%',new Parser.Entry(1, 24));put(Tag.EQ,new Parser.Entry(1, 24));put((int) '>',new Parser.Entry(1, 24));put((int) '^',new Parser.Entry(1, 24));put(Tag.RSHIFT,new Parser.Entry(1, 24));put((int) '=',new Parser.Entry(1, 24));put((int) '|',new Parser.Entry(1, 24));put((int) '<',new Parser.Entry(1, 24));put(Tag.LSHIFT,new Parser.Entry(1, 24));put(Tag.NE,new Parser.Entry(1, 24));put(Tag.AND,new Parser.Entry(1, 24));put(Tag.LE,new Parser.Entry(1, 24));put(Tag.GE,new Parser.Entry(1, 24));put((int) '/',new Parser.Entry(1, 24)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 75));put((int) ',',new Parser.Entry(1, 75));put(Tag.OR,new Parser.Entry(1, 75));put((int) '+',new Parser.Entry(1, 75));put((int) '*',new Parser.Entry(1, 75));put((int) ')',new Parser.Entry(1, 75));put((int) '&',new Parser.Entry(1, 75));put((int) '%',new Parser.Entry(1, 75));put(Tag.EQ,new Parser.Entry(1, 75));put((int) '>',new Parser.Entry(1, 75));put((int) '^',new Parser.Entry(1, 75));put(Tag.RSHIFT,new Parser.Entry(1, 75));put((int) '|',new Parser.Entry(1, 75));put((int) '<',new Parser.Entry(1, 75));put(Tag.LSHIFT,new Parser.Entry(1, 75));put(Tag.AND,new Parser.Entry(1, 75));put(Tag.NE,new Parser.Entry(1, 75));put(Tag.LE,new Parser.Entry(1, 75));put(Tag.GE,new Parser.Entry(1, 75));put((int) '/',new Parser.Entry(1, 75)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 61));put((int) '+',new Parser.Entry(1, 61));put(Tag.OR,new Parser.Entry(1, 61));put((int) '*',new Parser.Entry(1, 61));put((int) ')',new Parser.Entry(1, 61));put((int) '&',new Parser.Entry(1, 61));put((int) '%',new Parser.Entry(1, 61));put(Tag.EQ,new Parser.Entry(1, 61));put((int) '>',new Parser.Entry(1, 61));put(Tag.RSHIFT,new Parser.Entry(1, 61));put((int) '^',new Parser.Entry(1, 61));put((int) '<',new Parser.Entry(1, 61));put((int) '|',new Parser.Entry(1, 61));put(Tag.LSHIFT,new Parser.Entry(1, 61));put(Tag.NE,new Parser.Entry(1, 61));put(Tag.AND,new Parser.Entry(1, 61));put(Tag.LE,new Parser.Entry(1, 61));put(Tag.GE,new Parser.Entry(1, 61));put((int) '/',new Parser.Entry(1, 61)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 41));put((int) '+',new Parser.Entry(0, 400));put(Tag.OR,new Parser.Entry(0, 287));put((int) '*',new Parser.Entry(0, 352));put((int) '&',new Parser.Entry(0, 126));put((int) '%',new Parser.Entry(0, 144));put(Tag.EQ,new Parser.Entry(0, 365));put(Tag.RSHIFT,new Parser.Entry(0, 153));put((int) '^',new Parser.Entry(0, 293));put((int) '>',new Parser.Entry(0, 288));put((int) ']',new Parser.Entry(0, 278));put((int) '<',new Parser.Entry(0, 182));put((int) '|',new Parser.Entry(0, 42));put(Tag.LSHIFT,new Parser.Entry(0, 154));put(Tag.NE,new Parser.Entry(0, 78));put(Tag.AND,new Parser.Entry(0, 197));put(Tag.LE,new Parser.Entry(0, 275));put(Tag.GE,new Parser.Entry(0, 282));put((int) '/',new Parser.Entry(0, 309)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 41));
+            put((int) '+', new Parser.Entry(0, 400));
+            put(Tag.OR, new Parser.Entry(0, 287));
+            put((int) '*', new Parser.Entry(0, 352));
+            put((int) '&', new Parser.Entry(0, 126));
+            put((int) '%', new Parser.Entry(0, 144));
+            put(Tag.EQ, new Parser.Entry(0, 365));
+            put((int) '^', new Parser.Entry(0, 293));
+            put(Tag.RSHIFT, new Parser.Entry(0, 153));
+            put((int) '>', new Parser.Entry(0, 288));
+            put((int) ']', new Parser.Entry(0, 278));
+            put((int) '<', new Parser.Entry(0, 181));
+            put((int) '|', new Parser.Entry(0, 42));
+            put(Tag.LSHIFT, new Parser.Entry(0, 154));
+            put(Tag.NE, new Parser.Entry(0, 78));
+            put(Tag.AND, new Parser.Entry(0, 197));
+            put(Tag.LE, new Parser.Entry(0, 275));
+            put(Tag.GE, new Parser.Entry(0, 282));
+            put((int) '/', new Parser.Entry(0, 309));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 50));put(Tag.RETURN,new Parser.Entry(1, 50));put((int) '}',new Parser.Entry(1, 50));put((int) '{',new Parser.Entry(1, 50));put(Tag.IDENT,new Parser.Entry(1, 50));put(Tag.BREAK,new Parser.Entry(1, 50));put(Tag.WHILE,new Parser.Entry(1, 50));put((int) '$',new Parser.Entry(1, 50));put(Tag.IF,new Parser.Entry(1, 50)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 6));put(Tag.RETURN,new Parser.Entry(1, 6));put((int) '}',new Parser.Entry(1, 6));put((int) '{',new Parser.Entry(1, 6));put(Tag.IDENT,new Parser.Entry(1, 6));put(Tag.BREAK,new Parser.Entry(1, 6));put((int) '$',new Parser.Entry(1, 6));put(Tag.WHILE,new Parser.Entry(1, 6));put(Tag.IF,new Parser.Entry(1, 6)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 25));put((int) ',',new Parser.Entry(1, 25));put((int) '+',new Parser.Entry(1, 25));put(Tag.OR,new Parser.Entry(1, 25));put((int) '*',new Parser.Entry(1, 25));put((int) ')',new Parser.Entry(1, 25));put((int) '&',new Parser.Entry(1, 25));put((int) '%',new Parser.Entry(1, 25));put(Tag.EQ,new Parser.Entry(1, 25));put(Tag.RSHIFT,new Parser.Entry(1, 25));put((int) '>',new Parser.Entry(1, 25));put((int) '^',new Parser.Entry(1, 25));put((int) '<',new Parser.Entry(1, 25));put((int) '|',new Parser.Entry(1, 25));put(Tag.LSHIFT,new Parser.Entry(1, 25));put(Tag.NE,new Parser.Entry(1, 25));put(Tag.AND,new Parser.Entry(1, 25));put(Tag.LE,new Parser.Entry(1, 25));put(Tag.GE,new Parser.Entry(1, 25));put((int) '/',new Parser.Entry(1, 25)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.IDENT,new Parser.Entry(1, 7)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put(Tag.OR,new Parser.Entry(0, 326));put((int) '+',new Parser.Entry(0, 379));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put((int) '^',new Parser.Entry(0, 128));put((int) '>',new Parser.Entry(0, 279));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '<',new Parser.Entry(0, 123));put((int) '|',new Parser.Entry(0, 215));put((int) ';',new Parser.Entry(0, 396));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '+', new Parser.Entry(0, 379));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put((int) '^', new Parser.Entry(0, 128));
+            put((int) '>', new Parser.Entry(0, 279));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) ';', new Parser.Entry(0, 396));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 41));put((int) '+',new Parser.Entry(1, 41));put(Tag.OR,new Parser.Entry(1, 41));put((int) '*',new Parser.Entry(1, 41));put((int) ')',new Parser.Entry(1, 41));put((int) '&',new Parser.Entry(1, 41));put((int) '%',new Parser.Entry(1, 41));put(Tag.EQ,new Parser.Entry(1, 41));put((int) '^',new Parser.Entry(1, 41));put((int) '>',new Parser.Entry(1, 41));put(Tag.RSHIFT,new Parser.Entry(1, 41));put((int) '|',new Parser.Entry(1, 41));put((int) '<',new Parser.Entry(1, 41));put(Tag.LSHIFT,new Parser.Entry(1, 41));put(Tag.AND,new Parser.Entry(1, 41));put(Tag.NE,new Parser.Entry(1, 41));put(Tag.LE,new Parser.Entry(1, 41));put(Tag.GE,new Parser.Entry(1, 41));put((int) '/',new Parser.Entry(1, 41)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '(',new Parser.Entry(1, 43)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put((int) '+',new Parser.Entry(0, 379));put(Tag.OR,new Parser.Entry(0, 326));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '>',new Parser.Entry(0, 279));put((int) '^',new Parser.Entry(0, 128));put((int) '<',new Parser.Entry(0, 123));put((int) '|',new Parser.Entry(0, 215));put((int) ';',new Parser.Entry(0, 424));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '+', new Parser.Entry(0, 379));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put((int) '^', new Parser.Entry(0, 128));
+            put((int) '>', new Parser.Entry(0, 279));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) ';', new Parser.Entry(0, 425));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '-', new Parser.Entry(0, 89));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 17));put(Tag.OR,new Parser.Entry(1, 17));put((int) '+',new Parser.Entry(1, 17));put((int) '*',new Parser.Entry(1, 17));put((int) '&',new Parser.Entry(1, 17));put((int) '%',new Parser.Entry(1, 17));put(Tag.EQ,new Parser.Entry(1, 17));put(Tag.RSHIFT,new Parser.Entry(1, 17));put((int) '^',new Parser.Entry(1, 17));put((int) '>',new Parser.Entry(1, 17));put((int) ']',new Parser.Entry(1, 17));put((int) '<',new Parser.Entry(1, 17));put((int) '|',new Parser.Entry(1, 17));put(Tag.LSHIFT,new Parser.Entry(1, 17));put(Tag.NE,new Parser.Entry(1, 17));put(Tag.AND,new Parser.Entry(1, 17));put(Tag.LE,new Parser.Entry(1, 17));put(Tag.GE,new Parser.Entry(1, 17));put((int) '/',new Parser.Entry(1, 17)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 41));put((int) '+',new Parser.Entry(0, 400));put(Tag.OR,new Parser.Entry(0, 287));put((int) '*',new Parser.Entry(0, 352));put((int) '&',new Parser.Entry(0, 126));put((int) '%',new Parser.Entry(0, 144));put(Tag.EQ,new Parser.Entry(0, 365));put((int) '^',new Parser.Entry(0, 293));put(Tag.RSHIFT,new Parser.Entry(0, 153));put((int) '>',new Parser.Entry(0, 288));put((int) ']',new Parser.Entry(0, 264));put((int) '|',new Parser.Entry(0, 42));put((int) '<',new Parser.Entry(0, 182));put(Tag.LSHIFT,new Parser.Entry(0, 154));put(Tag.NE,new Parser.Entry(0, 78));put(Tag.AND,new Parser.Entry(0, 197));put(Tag.LE,new Parser.Entry(0, 275));put(Tag.GE,new Parser.Entry(0, 282));put((int) '/',new Parser.Entry(0, 309)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 41));
+            put((int) '+', new Parser.Entry(0, 400));
+            put(Tag.OR, new Parser.Entry(0, 287));
+            put((int) '*', new Parser.Entry(0, 352));
+            put((int) '&', new Parser.Entry(0, 126));
+            put((int) '%', new Parser.Entry(0, 144));
+            put(Tag.EQ, new Parser.Entry(0, 365));
+            put(Tag.RSHIFT, new Parser.Entry(0, 153));
+            put((int) '>', new Parser.Entry(0, 288));
+            put((int) '^', new Parser.Entry(0, 293));
+            put((int) ']', new Parser.Entry(0, 264));
+            put((int) '|', new Parser.Entry(0, 42));
+            put((int) '<', new Parser.Entry(0, 181));
+            put(Tag.LSHIFT, new Parser.Entry(0, 154));
+            put(Tag.AND, new Parser.Entry(0, 197));
+            put(Tag.NE, new Parser.Entry(0, 78));
+            put(Tag.LE, new Parser.Entry(0, 275));
+            put(Tag.GE, new Parser.Entry(0, 282));
+            put((int) '/', new Parser.Entry(0, 309));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 49));put(Tag.OR,new Parser.Entry(1, 49));put((int) '+',new Parser.Entry(1, 49));put((int) '*',new Parser.Entry(1, 49));put((int) '&',new Parser.Entry(1, 49));put((int) '%',new Parser.Entry(1, 49));put(Tag.EQ,new Parser.Entry(1, 49));put((int) '>',new Parser.Entry(1, 49));put(Tag.RSHIFT,new Parser.Entry(1, 49));put((int) '^',new Parser.Entry(1, 49));put((int) '|',new Parser.Entry(1, 49));put((int) '<',new Parser.Entry(1, 49));put((int) ';',new Parser.Entry(1, 49));put(Tag.LSHIFT,new Parser.Entry(1, 49));put(Tag.AND,new Parser.Entry(1, 49));put(Tag.NE,new Parser.Entry(1, 49));put(Tag.LE,new Parser.Entry(1, 49));put(Tag.GE,new Parser.Entry(1, 49));put((int) '/',new Parser.Entry(1, 49)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '-', new Parser.Entry(0, 89));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 58));put(Tag.OR,new Parser.Entry(1, 58));put((int) '+',new Parser.Entry(1, 58));put((int) '*',new Parser.Entry(1, 58));put((int) ')',new Parser.Entry(1, 58));put((int) '&',new Parser.Entry(1, 58));put((int) '%',new Parser.Entry(1, 58));put(Tag.EQ,new Parser.Entry(1, 58));put((int) '>',new Parser.Entry(1, 58));put((int) '^',new Parser.Entry(1, 58));put(Tag.RSHIFT,new Parser.Entry(1, 58));put((int) '|',new Parser.Entry(1, 58));put((int) '<',new Parser.Entry(1, 58));put(Tag.LSHIFT,new Parser.Entry(1, 58));put(Tag.AND,new Parser.Entry(1, 58));put(Tag.NE,new Parser.Entry(1, 58));put(Tag.LE,new Parser.Entry(1, 58));put(Tag.GE,new Parser.Entry(1, 58));put((int) '/',new Parser.Entry(1, 58)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 41));put((int) '+',new Parser.Entry(1, 41));put(Tag.OR,new Parser.Entry(1, 41));put((int) '*',new Parser.Entry(1, 41));put((int) '&',new Parser.Entry(1, 41));put((int) '%',new Parser.Entry(1, 41));put(Tag.EQ,new Parser.Entry(1, 41));put((int) '^',new Parser.Entry(1, 41));put((int) '>',new Parser.Entry(1, 41));put(Tag.RSHIFT,new Parser.Entry(1, 41));put((int) ']',new Parser.Entry(1, 41));put((int) '|',new Parser.Entry(1, 41));put((int) '<',new Parser.Entry(1, 41));put(Tag.LSHIFT,new Parser.Entry(1, 41));put(Tag.AND,new Parser.Entry(1, 41));put(Tag.NE,new Parser.Entry(1, 41));put(Tag.LE,new Parser.Entry(1, 41));put(Tag.GE,new Parser.Entry(1, 41));put((int) '/',new Parser.Entry(1, 41)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 15));put((int) '+',new Parser.Entry(1, 15));put(Tag.OR,new Parser.Entry(1, 15));put((int) '*',new Parser.Entry(1, 15));put((int) '&',new Parser.Entry(1, 15));put((int) '%',new Parser.Entry(1, 15));put(Tag.EQ,new Parser.Entry(1, 15));put(Tag.RSHIFT,new Parser.Entry(1, 15));put((int) '^',new Parser.Entry(1, 15));put((int) '>',new Parser.Entry(1, 15));put((int) '<',new Parser.Entry(1, 15));put((int) '|',new Parser.Entry(1, 15));put((int) ';',new Parser.Entry(1, 15));put(Tag.LSHIFT,new Parser.Entry(1, 15));put(Tag.NE,new Parser.Entry(1, 15));put(Tag.AND,new Parser.Entry(1, 15));put(Tag.LE,new Parser.Entry(1, 15));put(Tag.GE,new Parser.Entry(1, 15));put((int) '/',new Parser.Entry(1, 15)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put((int) ';',new Parser.Entry(0, 292));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
@@ -1481,54 +2193,246 @@ public class Parser {
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.IDENT,new Parser.Entry(0, 391)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put((int) ')',new Parser.Entry(1, 4));put((int) '(',new Parser.Entry(0, 251));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88));put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put(Tag.IDENT,new Parser.Entry(0, 238));put(Tag.HEXNUM,new Parser.Entry(0, 82)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 91));
+            put((int) '+', new Parser.Entry(0, 239));
+            put((int) ')', new Parser.Entry(1, 4));
+            put((int) '(', new Parser.Entry(0, 251));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+            put((int) '~', new Parser.Entry(0, 388));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 24));put((int) '+',new Parser.Entry(1, 24));put(Tag.OR,new Parser.Entry(1, 24));put((int) '*',new Parser.Entry(1, 24));put((int) '&',new Parser.Entry(1, 24));put((int) '%',new Parser.Entry(1, 24));put(Tag.EQ,new Parser.Entry(1, 24));put((int) '>',new Parser.Entry(1, 24));put((int) '^',new Parser.Entry(1, 24));put(Tag.RSHIFT,new Parser.Entry(1, 24));put((int) '|',new Parser.Entry(1, 24));put((int) '<',new Parser.Entry(1, 24));put((int) ';',new Parser.Entry(1, 24));put(Tag.LSHIFT,new Parser.Entry(1, 24));put(Tag.NE,new Parser.Entry(1, 24));put(Tag.AND,new Parser.Entry(1, 24));put(Tag.LE,new Parser.Entry(1, 24));put(Tag.GE,new Parser.Entry(1, 24));put((int) '/',new Parser.Entry(1, 24)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 77));put(Tag.OR,new Parser.Entry(1, 77));put((int) '+',new Parser.Entry(1, 77));put((int) '*',new Parser.Entry(1, 77));put((int) ')',new Parser.Entry(1, 77));put((int) '&',new Parser.Entry(1, 77));put((int) '%',new Parser.Entry(1, 77));put(Tag.EQ,new Parser.Entry(1, 77));put((int) '^',new Parser.Entry(1, 77));put((int) '>',new Parser.Entry(1, 77));put(Tag.RSHIFT,new Parser.Entry(1, 77));put((int) '<',new Parser.Entry(1, 77));put((int) '|',new Parser.Entry(1, 77));put(Tag.LSHIFT,new Parser.Entry(1, 77));put(Tag.AND,new Parser.Entry(1, 77));put(Tag.NE,new Parser.Entry(1, 77));put(Tag.LE,new Parser.Entry(1, 77));put(Tag.GE,new Parser.Entry(1, 77));put((int) '/',new Parser.Entry(1, 77)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.DECNUM,new Parser.Entry(0, 233));put(Tag.HEXNUM,new Parser.Entry(0, 161)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 0));put(Tag.RETURN,new Parser.Entry(1, 0));put((int) '}',new Parser.Entry(1, 0));put((int) '{',new Parser.Entry(1, 0));put(Tag.IDENT,new Parser.Entry(1, 0));put(Tag.BREAK,new Parser.Entry(1, 0));put(Tag.WHILE,new Parser.Entry(1, 0));put((int) '$',new Parser.Entry(1, 0));put(Tag.IF,new Parser.Entry(1, 0)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 41));put((int) '+',new Parser.Entry(1, 41));put(Tag.OR,new Parser.Entry(1, 41));put((int) '*',new Parser.Entry(1, 41));put((int) '&',new Parser.Entry(1, 41));put((int) '%',new Parser.Entry(1, 41));put(Tag.EQ,new Parser.Entry(1, 41));put((int) '^',new Parser.Entry(1, 41));put((int) '>',new Parser.Entry(1, 41));put(Tag.RSHIFT,new Parser.Entry(1, 41));put((int) '=',new Parser.Entry(1, 41));put((int) '|',new Parser.Entry(1, 41));put((int) '<',new Parser.Entry(1, 41));put(Tag.LSHIFT,new Parser.Entry(1, 41));put(Tag.AND,new Parser.Entry(1, 41));put(Tag.NE,new Parser.Entry(1, 41));put(Tag.LE,new Parser.Entry(1, 41));put(Tag.GE,new Parser.Entry(1, 41));put((int) '/',new Parser.Entry(1, 41)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 56));put((int) '}',new Parser.Entry(1, 56));put(Tag.RETURN,new Parser.Entry(1, 56));put((int) '{',new Parser.Entry(1, 56));put(Tag.IDENT,new Parser.Entry(1, 56));put(Tag.BREAK,new Parser.Entry(1, 56));put(Tag.WHILE,new Parser.Entry(1, 56));put((int) '$',new Parser.Entry(1, 56));put(Tag.IF,new Parser.Entry(1, 56)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 41));put(Tag.OR,new Parser.Entry(0, 287));put((int) '+',new Parser.Entry(0, 400));put((int) '*',new Parser.Entry(0, 352));put((int) '&',new Parser.Entry(0, 126));put((int) '%',new Parser.Entry(0, 144));put(Tag.EQ,new Parser.Entry(0, 365));put((int) '^',new Parser.Entry(0, 293));put(Tag.RSHIFT,new Parser.Entry(0, 153));put((int) '>',new Parser.Entry(0, 288));put((int) ']',new Parser.Entry(0, 179));put((int) '<',new Parser.Entry(0, 182));put((int) '|',new Parser.Entry(0, 42));put(Tag.LSHIFT,new Parser.Entry(0, 154));put(Tag.AND,new Parser.Entry(0, 197));put(Tag.NE,new Parser.Entry(0, 78));put(Tag.LE,new Parser.Entry(0, 275));put(Tag.GE,new Parser.Entry(0, 282));put((int) '/',new Parser.Entry(0, 309)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 41));
+            put((int) '+', new Parser.Entry(0, 400));
+            put(Tag.OR, new Parser.Entry(0, 287));
+            put((int) '*', new Parser.Entry(0, 352));
+            put((int) '&', new Parser.Entry(0, 126));
+            put((int) '%', new Parser.Entry(0, 144));
+            put(Tag.EQ, new Parser.Entry(0, 365));
+            put((int) '^', new Parser.Entry(0, 293));
+            put((int) '>', new Parser.Entry(0, 288));
+            put(Tag.RSHIFT, new Parser.Entry(0, 153));
+            put((int) ']', new Parser.Entry(0, 180));
+            put((int) '<', new Parser.Entry(0, 181));
+            put((int) '|', new Parser.Entry(0, 42));
+            put(Tag.LSHIFT, new Parser.Entry(0, 154));
+            put(Tag.AND, new Parser.Entry(0, 197));
+            put(Tag.NE, new Parser.Entry(0, 78));
+            put(Tag.LE, new Parser.Entry(0, 275));
+            put(Tag.GE, new Parser.Entry(0, 282));
+            put((int) '/', new Parser.Entry(0, 309));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put((int) '+', new Parser.Entry(0, 379));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '>', new Parser.Entry(0, 279));
+            put((int) '^', new Parser.Entry(0, 128));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) ';', new Parser.Entry(0, 79));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 49));put(Tag.OR,new Parser.Entry(1, 49));put((int) '+',new Parser.Entry(1, 49));put((int) '*',new Parser.Entry(1, 49));put((int) '&',new Parser.Entry(1, 49));put((int) '%',new Parser.Entry(1, 49));put(Tag.EQ,new Parser.Entry(1, 49));put((int) '>',new Parser.Entry(1, 49));put(Tag.RSHIFT,new Parser.Entry(1, 49));put((int) '^',new Parser.Entry(1, 49));put((int) ']',new Parser.Entry(1, 49));put((int) '|',new Parser.Entry(1, 49));put((int) '<',new Parser.Entry(1, 49));put(Tag.LSHIFT,new Parser.Entry(1, 49));put(Tag.AND,new Parser.Entry(1, 49));put(Tag.NE,new Parser.Entry(1, 49));put(Tag.LE,new Parser.Entry(1, 49));put(Tag.GE,new Parser.Entry(1, 49));put((int) '/',new Parser.Entry(1, 49)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put(Tag.OR,new Parser.Entry(0, 326));put((int) '+',new Parser.Entry(0, 379));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put((int) '^',new Parser.Entry(0, 128));put((int) '>',new Parser.Entry(0, 279));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '<',new Parser.Entry(0, 123));put((int) '|',new Parser.Entry(0, 215));put((int) ';',new Parser.Entry(0, 79));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 73));put(Tag.OR,new Parser.Entry(1, 73));put((int) '+',new Parser.Entry(1, 73));put((int) '*',new Parser.Entry(1, 73));put((int) ')',new Parser.Entry(1, 73));put((int) '&',new Parser.Entry(1, 73));put((int) '%',new Parser.Entry(1, 73));put(Tag.EQ,new Parser.Entry(1, 73));put((int) '^',new Parser.Entry(1, 73));put(Tag.RSHIFT,new Parser.Entry(1, 73));put((int) '>',new Parser.Entry(1, 73));put((int) '<',new Parser.Entry(1, 73));put((int) '|',new Parser.Entry(1, 73));put(Tag.LSHIFT,new Parser.Entry(1, 73));put(Tag.NE,new Parser.Entry(1, 73));put(Tag.AND,new Parser.Entry(1, 73));put(Tag.LE,new Parser.Entry(1, 73));put(Tag.GE,new Parser.Entry(1, 73));put((int) '/',new Parser.Entry(1, 73)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 25));put((int) '+',new Parser.Entry(1, 25));put(Tag.OR,new Parser.Entry(1, 25));put((int) '*',new Parser.Entry(1, 25));put((int) '&',new Parser.Entry(1, 25));put((int) '%',new Parser.Entry(1, 25));put(Tag.EQ,new Parser.Entry(1, 25));put(Tag.RSHIFT,new Parser.Entry(1, 25));put((int) '>',new Parser.Entry(1, 25));put((int) '^',new Parser.Entry(1, 25));put((int) '<',new Parser.Entry(1, 25));put((int) '|',new Parser.Entry(1, 25));put((int) ';',new Parser.Entry(1, 25));put(Tag.LSHIFT,new Parser.Entry(1, 25));put(Tag.NE,new Parser.Entry(1, 25));put(Tag.AND,new Parser.Entry(1, 25));put(Tag.LE,new Parser.Entry(1, 25));put(Tag.GE,new Parser.Entry(1, 25));put((int) '/',new Parser.Entry(1, 25)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 19));put((int) ',',new Parser.Entry(1, 19));put((int) '+',new Parser.Entry(1, 19));put(Tag.OR,new Parser.Entry(1, 19));put((int) '*',new Parser.Entry(1, 19));put((int) ')',new Parser.Entry(1, 19));put((int) '&',new Parser.Entry(1, 19));put((int) '%',new Parser.Entry(1, 19));put(Tag.EQ,new Parser.Entry(1, 19));put(Tag.RSHIFT,new Parser.Entry(1, 19));put((int) '^',new Parser.Entry(1, 19));put((int) '>',new Parser.Entry(1, 19));put((int) '|',new Parser.Entry(1, 19));put((int) '<',new Parser.Entry(1, 19));put(Tag.LSHIFT,new Parser.Entry(1, 19));put(Tag.NE,new Parser.Entry(1, 19));put(Tag.AND,new Parser.Entry(1, 19));put(Tag.LE,new Parser.Entry(1, 19));put(Tag.GE,new Parser.Entry(1, 19));put((int) '/',new Parser.Entry(1, 19)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 402));put(Tag.CONTINUE,new Parser.Entry(0, 376));put(Tag.RETURN,new Parser.Entry(0, 103));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 300));put(Tag.BREAK,new Parser.Entry(0, 172));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 146)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 50));put(Tag.RETURN,new Parser.Entry(1, 50));put((int) '}',new Parser.Entry(1, 50));put((int) '{',new Parser.Entry(1, 50));put(Tag.IDENT,new Parser.Entry(1, 50));put(Tag.BREAK,new Parser.Entry(1, 50));put(Tag.ELSE,new Parser.Entry(1, 50));put(Tag.WHILE,new Parser.Entry(1, 50));put((int) '$',new Parser.Entry(1, 50));put(Tag.IF,new Parser.Entry(1, 50)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.IDENT,new Parser.Entry(0, 72)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 11));put(Tag.RETURN,new Parser.Entry(1, 11));put((int) '}',new Parser.Entry(1, 11));put((int) '{',new Parser.Entry(1, 11));put(Tag.IDENT,new Parser.Entry(1, 11));put(Tag.BREAK,new Parser.Entry(1, 11));put((int) '$',new Parser.Entry(1, 11));put(Tag.WHILE,new Parser.Entry(1, 11));put(Tag.IF,new Parser.Entry(1, 11)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put((int) ')',new Parser.Entry(1, 4));put((int) '(',new Parser.Entry(0, 251));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88));put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put(Tag.IDENT,new Parser.Entry(0, 238));put(Tag.HEXNUM,new Parser.Entry(0, 82)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 91));
+            put((int) '+', new Parser.Entry(0, 239));
+            put((int) ')', new Parser.Entry(1, 4));
+            put((int) '(', new Parser.Entry(0, 251));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+            put((int) '~', new Parser.Entry(0, 388));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 68));put(Tag.RETURN,new Parser.Entry(1, 68));put((int) '}',new Parser.Entry(1, 68));put((int) '{',new Parser.Entry(1, 68));put(Tag.IDENT,new Parser.Entry(1, 68));put(Tag.BREAK,new Parser.Entry(1, 68));put(Tag.ELSE,new Parser.Entry(1, 68));put(Tag.WHILE,new Parser.Entry(1, 68));put((int) '$',new Parser.Entry(1, 68));put(Tag.IF,new Parser.Entry(1, 68)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 428)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 77));put(Tag.OR,new Parser.Entry(1, 77));put((int) '+',new Parser.Entry(1, 77));put((int) '*',new Parser.Entry(1, 77));put((int) '&',new Parser.Entry(1, 77));put((int) '%',new Parser.Entry(1, 77));put(Tag.EQ,new Parser.Entry(1, 77));put((int) '^',new Parser.Entry(1, 77));put((int) '>',new Parser.Entry(1, 77));put(Tag.RSHIFT,new Parser.Entry(1, 77));put((int) ']',new Parser.Entry(1, 77));put((int) '<',new Parser.Entry(1, 77));put((int) '|',new Parser.Entry(1, 77));put(Tag.LSHIFT,new Parser.Entry(1, 77));put(Tag.AND,new Parser.Entry(1, 77));put(Tag.NE,new Parser.Entry(1, 77));put(Tag.LE,new Parser.Entry(1, 77));put(Tag.GE,new Parser.Entry(1, 77));put((int) '/',new Parser.Entry(1, 77)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 45));put(Tag.RETURN,new Parser.Entry(1, 45));put((int) '}',new Parser.Entry(1, 45));put((int) '{',new Parser.Entry(1, 45));put(Tag.IDENT,new Parser.Entry(1, 45));put(Tag.BREAK,new Parser.Entry(1, 45));put((int) '$',new Parser.Entry(1, 45));put(Tag.WHILE,new Parser.Entry(1, 45));put(Tag.IF,new Parser.Entry(1, 45)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '(',new Parser.Entry(0, 394)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 32));put((int) '+',new Parser.Entry(1, 32));put(Tag.OR,new Parser.Entry(1, 32));put((int) '*',new Parser.Entry(1, 32));put((int) '&',new Parser.Entry(1, 32));put((int) '%',new Parser.Entry(1, 32));put(Tag.EQ,new Parser.Entry(1, 32));put(Tag.RSHIFT,new Parser.Entry(1, 32));put((int) '^',new Parser.Entry(1, 32));put((int) '>',new Parser.Entry(1, 32));put((int) '=',new Parser.Entry(1, 32));put((int) '|',new Parser.Entry(1, 32));put((int) '<',new Parser.Entry(1, 32));put(Tag.LSHIFT,new Parser.Entry(1, 32));put(Tag.NE,new Parser.Entry(1, 32));put(Tag.AND,new Parser.Entry(1, 32));put(Tag.LE,new Parser.Entry(1, 32));put(Tag.GE,new Parser.Entry(1, 32));put((int) '/',new Parser.Entry(1, 32)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '(',new Parser.Entry(0, 266)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 74));put(Tag.VOID,new Parser.Entry(1, 74));put(Tag.INT,new Parser.Entry(1, 74)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 3));put(Tag.RETURN,new Parser.Entry(1, 3));put((int) '}',new Parser.Entry(1, 3));put((int) '{',new Parser.Entry(1, 3));put(Tag.IDENT,new Parser.Entry(1, 3));put(Tag.BREAK,new Parser.Entry(1, 3));put(Tag.WHILE,new Parser.Entry(1, 3));put((int) '$',new Parser.Entry(1, 3));put(Tag.IF,new Parser.Entry(1, 3)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 9));put(Tag.OR,new Parser.Entry(1, 9));put((int) '+',new Parser.Entry(1, 9));put((int) '*',new Parser.Entry(1, 9));put((int) '&',new Parser.Entry(1, 9));put((int) '%',new Parser.Entry(1, 9));put(Tag.EQ,new Parser.Entry(1, 9));put((int) '^',new Parser.Entry(1, 9));put(Tag.RSHIFT,new Parser.Entry(1, 9));put((int) '>',new Parser.Entry(1, 9));put((int) '|',new Parser.Entry(1, 9));put((int) '<',new Parser.Entry(1, 9));put((int) ';',new Parser.Entry(1, 9));put(Tag.LSHIFT,new Parser.Entry(1, 9));put(Tag.AND,new Parser.Entry(1, 9));put(Tag.NE,new Parser.Entry(1, 9));put(Tag.LE,new Parser.Entry(1, 9));put(Tag.GE,new Parser.Entry(1, 9));put((int) '/',new Parser.Entry(1, 9)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 1));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put((int) '>',new Parser.Entry(0, 206));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '^',new Parser.Entry(0, 142));put((int) '|',new Parser.Entry(0, 124));put((int) '<',new Parser.Entry(0, 150));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put((int) '+', new Parser.Entry(0, 319));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 1));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put((int) '^', new Parser.Entry(0, 142));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '>', new Parser.Entry(0, 206));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 402));put(Tag.CONTINUE,new Parser.Entry(0, 376));put(Tag.RETURN,new Parser.Entry(0, 103));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 300));put(Tag.BREAK,new Parser.Entry(0, 172));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 146)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ']',new Parser.Entry(1, 25)); }} );
@@ -1536,30 +2440,141 @@ public class Parser {
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(1, 60));put(Tag.INT,new Parser.Entry(0, 83));put(Tag.CONTINUE,new Parser.Entry(1, 60));put(Tag.RETURN,new Parser.Entry(1, 60));put((int) '}',new Parser.Entry(1, 60));put((int) '{',new Parser.Entry(1, 60));put(Tag.IDENT,new Parser.Entry(1, 60));put(Tag.BREAK,new Parser.Entry(1, 60));put(Tag.WHILE,new Parser.Entry(1, 60));put(Tag.VOID,new Parser.Entry(0, 367));put(Tag.IF,new Parser.Entry(1, 60)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 12));put(Tag.RETURN,new Parser.Entry(1, 12));put((int) '}',new Parser.Entry(1, 12));put((int) '{',new Parser.Entry(1, 12));put(Tag.IDENT,new Parser.Entry(1, 12));put(Tag.BREAK,new Parser.Entry(1, 12));put(Tag.WHILE,new Parser.Entry(1, 12));put((int) '$',new Parser.Entry(1, 12));put(Tag.IF,new Parser.Entry(1, 12)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 252)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ',',new Parser.Entry(0, 50));put((int) ')',new Parser.Entry(1, 76)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 5));put((int) '}',new Parser.Entry(1, 5));put(Tag.RETURN,new Parser.Entry(1, 5));put((int) '{',new Parser.Entry(1, 5));put(Tag.IDENT,new Parser.Entry(1, 5));put(Tag.BREAK,new Parser.Entry(1, 5));put(Tag.WHILE,new Parser.Entry(1, 5));put((int) '$',new Parser.Entry(1, 5));put(Tag.IF,new Parser.Entry(1, 5)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 63));
+            put((int) '+', new Parser.Entry(1, 63));
+            put(Tag.OR, new Parser.Entry(1, 63));
+            put((int) '*', new Parser.Entry(1, 63));
+            put((int) '&', new Parser.Entry(1, 63));
+            put((int) '%', new Parser.Entry(1, 63));
+            put(Tag.EQ, new Parser.Entry(1, 63));
+            put((int) '^', new Parser.Entry(1, 63));
+            put((int) '>', new Parser.Entry(1, 63));
+            put(Tag.RSHIFT, new Parser.Entry(1, 63));
+            put((int) '=', new Parser.Entry(1, 63));
+            put((int) '<', new Parser.Entry(1, 63));
+            put((int) '|', new Parser.Entry(1, 63));
+            put(Tag.LSHIFT, new Parser.Entry(1, 63));
+            put(Tag.NE, new Parser.Entry(1, 63));
+            put(Tag.AND, new Parser.Entry(1, 63));
+            put(Tag.LE, new Parser.Entry(1, 63));
+            put(Tag.GE, new Parser.Entry(1, 63));
+            put((int) '/', new Parser.Entry(1, 63));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 0));put(Tag.RETURN,new Parser.Entry(1, 0));put((int) '}',new Parser.Entry(1, 0));put((int) '{',new Parser.Entry(1, 0));put(Tag.IDENT,new Parser.Entry(1, 0));put(Tag.BREAK,new Parser.Entry(1, 0));put(Tag.ELSE,new Parser.Entry(1, 0));put(Tag.WHILE,new Parser.Entry(1, 0));put((int) '$',new Parser.Entry(1, 0));put(Tag.IF,new Parser.Entry(1, 0)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 63));put((int) '+',new Parser.Entry(1, 63));put(Tag.OR,new Parser.Entry(1, 63));put((int) '*',new Parser.Entry(1, 63));put((int) '&',new Parser.Entry(1, 63));put((int) '%',new Parser.Entry(1, 63));put(Tag.EQ,new Parser.Entry(1, 63));put((int) '^',new Parser.Entry(1, 63));put((int) '>',new Parser.Entry(1, 63));put(Tag.RSHIFT,new Parser.Entry(1, 63));put((int) '=',new Parser.Entry(1, 63));put((int) '<',new Parser.Entry(1, 63));put((int) '|',new Parser.Entry(1, 63));put(Tag.LSHIFT,new Parser.Entry(1, 63));put(Tag.NE,new Parser.Entry(1, 63));put(Tag.AND,new Parser.Entry(1, 63));put(Tag.LE,new Parser.Entry(1, 63));put(Tag.GE,new Parser.Entry(1, 63));put((int) '/',new Parser.Entry(1, 63)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 421)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put((int) ')',new Parser.Entry(1, 4));put((int) '(',new Parser.Entry(0, 251));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88));put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put(Tag.IDENT,new Parser.Entry(0, 238));put(Tag.HEXNUM,new Parser.Entry(0, 82)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 91));
+            put((int) '+', new Parser.Entry(0, 239));
+            put((int) ')', new Parser.Entry(1, 4));
+            put((int) '(', new Parser.Entry(0, 251));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+            put((int) '~', new Parser.Entry(0, 388));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 66));put((int) ',',new Parser.Entry(1, 66));put(Tag.OR,new Parser.Entry(1, 66));put((int) '+',new Parser.Entry(1, 66));put((int) '*',new Parser.Entry(1, 66));put((int) ')',new Parser.Entry(1, 66));put((int) '&',new Parser.Entry(1, 66));put((int) '%',new Parser.Entry(1, 66));put(Tag.EQ,new Parser.Entry(1, 66));put(Tag.RSHIFT,new Parser.Entry(1, 66));put((int) '>',new Parser.Entry(1, 66));put((int) '^',new Parser.Entry(1, 66));put((int) '|',new Parser.Entry(1, 66));put((int) '<',new Parser.Entry(1, 66));put(Tag.LSHIFT,new Parser.Entry(1, 66));put(Tag.NE,new Parser.Entry(1, 66));put(Tag.AND,new Parser.Entry(1, 66));put(Tag.LE,new Parser.Entry(1, 66));put(Tag.GE,new Parser.Entry(1, 66));put((int) '/',new Parser.Entry(1, 66)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 49));put(Tag.OR,new Parser.Entry(1, 49));put((int) '+',new Parser.Entry(1, 49));put((int) '*',new Parser.Entry(1, 49));put((int) ')',new Parser.Entry(1, 49));put((int) '&',new Parser.Entry(1, 49));put((int) '%',new Parser.Entry(1, 49));put(Tag.EQ,new Parser.Entry(1, 49));put((int) '>',new Parser.Entry(1, 49));put(Tag.RSHIFT,new Parser.Entry(1, 49));put((int) '^',new Parser.Entry(1, 49));put((int) '|',new Parser.Entry(1, 49));put((int) '<',new Parser.Entry(1, 49));put(Tag.LSHIFT,new Parser.Entry(1, 49));put(Tag.AND,new Parser.Entry(1, 49));put(Tag.NE,new Parser.Entry(1, 49));put(Tag.LE,new Parser.Entry(1, 49));put(Tag.GE,new Parser.Entry(1, 49));put((int) '/',new Parser.Entry(1, 49)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 75));put(Tag.OR,new Parser.Entry(1, 75));put((int) '+',new Parser.Entry(1, 75));put((int) '*',new Parser.Entry(1, 75));put((int) '&',new Parser.Entry(1, 75));put((int) '%',new Parser.Entry(1, 75));put(Tag.EQ,new Parser.Entry(1, 75));put((int) '>',new Parser.Entry(1, 75));put((int) '^',new Parser.Entry(1, 75));put(Tag.RSHIFT,new Parser.Entry(1, 75));put((int) ']',new Parser.Entry(1, 75));put((int) '|',new Parser.Entry(1, 75));put((int) '<',new Parser.Entry(1, 75));put(Tag.LSHIFT,new Parser.Entry(1, 75));put(Tag.AND,new Parser.Entry(1, 75));put(Tag.NE,new Parser.Entry(1, 75));put(Tag.LE,new Parser.Entry(1, 75));put(Tag.GE,new Parser.Entry(1, 75));put((int) '/',new Parser.Entry(1, 75)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 39));put(Tag.VOID,new Parser.Entry(1, 39));put(Tag.INT,new Parser.Entry(1, 39)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 52));
+            put((int) '+', new Parser.Entry(1, 52));
+            put(Tag.OR, new Parser.Entry(1, 52));
+            put((int) '*', new Parser.Entry(1, 52));
+            put((int) '&', new Parser.Entry(1, 52));
+            put((int) '%', new Parser.Entry(1, 52));
+            put(Tag.EQ, new Parser.Entry(1, 52));
+            put((int) '^', new Parser.Entry(1, 52));
+            put((int) '>', new Parser.Entry(1, 52));
+            put(Tag.RSHIFT, new Parser.Entry(1, 52));
+            put((int) '<', new Parser.Entry(1, 52));
+            put((int) '|', new Parser.Entry(1, 52));
+            put((int) ';', new Parser.Entry(1, 52));
+            put(Tag.LSHIFT, new Parser.Entry(1, 52));
+            put(Tag.NE, new Parser.Entry(1, 52));
+            put(Tag.AND, new Parser.Entry(1, 52));
+            put(Tag.LE, new Parser.Entry(1, 52));
+            put(Tag.GE, new Parser.Entry(1, 52));
+            put((int) '/', new Parser.Entry(1, 52));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '=',new Parser.Entry(0, 416)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 52));put((int) '+',new Parser.Entry(1, 52));put(Tag.OR,new Parser.Entry(1, 52));put((int) '*',new Parser.Entry(1, 52));put((int) '&',new Parser.Entry(1, 52));put((int) '%',new Parser.Entry(1, 52));put(Tag.EQ,new Parser.Entry(1, 52));put((int) '^',new Parser.Entry(1, 52));put((int) '>',new Parser.Entry(1, 52));put(Tag.RSHIFT,new Parser.Entry(1, 52));put((int) '<',new Parser.Entry(1, 52));put((int) '|',new Parser.Entry(1, 52));put((int) ';',new Parser.Entry(1, 52));put(Tag.LSHIFT,new Parser.Entry(1, 52));put(Tag.NE,new Parser.Entry(1, 52));put(Tag.AND,new Parser.Entry(1, 52));put(Tag.LE,new Parser.Entry(1, 52));put(Tag.GE,new Parser.Entry(1, 52));put((int) '/',new Parser.Entry(1, 52)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '-', new Parser.Entry(0, 158));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '-', new Parser.Entry(0, 89));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '-',new Parser.Entry(0, 89));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 15));put((int) '+',new Parser.Entry(1, 15));put(Tag.OR,new Parser.Entry(1, 15));put((int) '*',new Parser.Entry(1, 15));put((int) '&',new Parser.Entry(1, 15));put((int) '%',new Parser.Entry(1, 15));put(Tag.EQ,new Parser.Entry(1, 15));put(Tag.RSHIFT,new Parser.Entry(1, 15));put((int) '^',new Parser.Entry(1, 15));put((int) '>',new Parser.Entry(1, 15));put((int) '=',new Parser.Entry(1, 15));put((int) '<',new Parser.Entry(1, 15));put((int) '|',new Parser.Entry(1, 15));put(Tag.LSHIFT,new Parser.Entry(1, 15));put(Tag.NE,new Parser.Entry(1, 15));put(Tag.AND,new Parser.Entry(1, 15));put(Tag.LE,new Parser.Entry(1, 15));put(Tag.GE,new Parser.Entry(1, 15));put((int) '/',new Parser.Entry(1, 15)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 59));put(Tag.VOID,new Parser.Entry(1, 59));put(Tag.INT,new Parser.Entry(1, 59)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 53));put((int) '}',new Parser.Entry(1, 53));put(Tag.RETURN,new Parser.Entry(1, 53));put((int) '{',new Parser.Entry(1, 53));put(Tag.IDENT,new Parser.Entry(1, 53));put(Tag.BREAK,new Parser.Entry(1, 53));put(Tag.ELSE,new Parser.Entry(1, 53));put((int) '$',new Parser.Entry(1, 53));put(Tag.WHILE,new Parser.Entry(1, 53));put(Tag.IF,new Parser.Entry(1, 53)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put((int) '+',new Parser.Entry(0, 379));put(Tag.OR,new Parser.Entry(0, 326));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '>',new Parser.Entry(0, 279));put((int) '^',new Parser.Entry(0, 128));put((int) '|',new Parser.Entry(0, 215));put((int) '<',new Parser.Entry(0, 123));put((int) ';',new Parser.Entry(0, 423));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '+', new Parser.Entry(0, 379));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put((int) '^', new Parser.Entry(0, 128));
+            put((int) '>', new Parser.Entry(0, 279));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) ';', new Parser.Entry(0, 423));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 35));put(Tag.OR,new Parser.Entry(1, 35));put((int) '+',new Parser.Entry(1, 35));put((int) '*',new Parser.Entry(1, 35));put((int) ')',new Parser.Entry(1, 35));put((int) '&',new Parser.Entry(1, 35));put((int) '%',new Parser.Entry(1, 35));put(Tag.EQ,new Parser.Entry(1, 35));put(Tag.RSHIFT,new Parser.Entry(1, 35));put((int) '>',new Parser.Entry(1, 35));put((int) '^',new Parser.Entry(1, 35));put((int) '|',new Parser.Entry(1, 35));put((int) '<',new Parser.Entry(1, 35));put(Tag.LSHIFT,new Parser.Entry(1, 35));put(Tag.NE,new Parser.Entry(1, 35));put(Tag.AND,new Parser.Entry(1, 35));put(Tag.LE,new Parser.Entry(1, 35));put(Tag.GE,new Parser.Entry(1, 35));put((int) '/',new Parser.Entry(1, 35)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ',',new Parser.Entry(1, 13));put((int) ')',new Parser.Entry(1, 13)); }} );
@@ -1567,7 +2582,17 @@ public class Parser {
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ')',new Parser.Entry(0, 343)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 38));put((int) '+',new Parser.Entry(1, 38));put(Tag.OR,new Parser.Entry(1, 38));put((int) '*',new Parser.Entry(1, 38));put((int) '&',new Parser.Entry(1, 38));put((int) '%',new Parser.Entry(1, 38));put(Tag.EQ,new Parser.Entry(1, 38));put((int) '^',new Parser.Entry(1, 38));put((int) '>',new Parser.Entry(1, 38));put(Tag.RSHIFT,new Parser.Entry(1, 38));put((int) ']',new Parser.Entry(1, 38));put((int) '|',new Parser.Entry(1, 38));put((int) '<',new Parser.Entry(1, 38));put(Tag.LSHIFT,new Parser.Entry(1, 38));put(Tag.NE,new Parser.Entry(1, 38));put(Tag.AND,new Parser.Entry(1, 38));put(Tag.LE,new Parser.Entry(1, 38));put(Tag.GE,new Parser.Entry(1, 38));put((int) '/',new Parser.Entry(1, 38)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '-', new Parser.Entry(0, 75));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 33));put((int) '+',new Parser.Entry(1, 33));put(Tag.OR,new Parser.Entry(1, 33));put((int) '*',new Parser.Entry(1, 33));put((int) '&',new Parser.Entry(1, 33));put((int) '%',new Parser.Entry(1, 33));put(Tag.EQ,new Parser.Entry(1, 33));put(Tag.RSHIFT,new Parser.Entry(1, 33));put((int) '^',new Parser.Entry(1, 33));put((int) '>',new Parser.Entry(1, 33));put((int) ']',new Parser.Entry(1, 33));put((int) '|',new Parser.Entry(1, 33));put((int) '<',new Parser.Entry(1, 33));put(Tag.LSHIFT,new Parser.Entry(1, 33));put(Tag.AND,new Parser.Entry(1, 33));put(Tag.NE,new Parser.Entry(1, 33));put(Tag.LE,new Parser.Entry(1, 33));put(Tag.GE,new Parser.Entry(1, 33));put((int) '/',new Parser.Entry(1, 33)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 78));put((int) '+',new Parser.Entry(1, 78));put(Tag.OR,new Parser.Entry(1, 78));put((int) '*',new Parser.Entry(1, 78));put((int) '&',new Parser.Entry(1, 78));put((int) '%',new Parser.Entry(1, 78));put(Tag.EQ,new Parser.Entry(1, 78));put((int) '>',new Parser.Entry(1, 78));put((int) '^',new Parser.Entry(1, 78));put(Tag.RSHIFT,new Parser.Entry(1, 78));put((int) '|',new Parser.Entry(1, 78));put((int) '<',new Parser.Entry(1, 78));put((int) ';',new Parser.Entry(1, 78));put(Tag.LSHIFT,new Parser.Entry(1, 78));put(Tag.AND,new Parser.Entry(1, 78));put(Tag.NE,new Parser.Entry(1, 78));put(Tag.LE,new Parser.Entry(1, 78));put(Tag.GE,new Parser.Entry(1, 78));put((int) '/',new Parser.Entry(1, 78)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 66));put(Tag.OR,new Parser.Entry(1, 66));put((int) '+',new Parser.Entry(1, 66));put((int) '*',new Parser.Entry(1, 66));put((int) ')',new Parser.Entry(1, 66));put((int) '&',new Parser.Entry(1, 66));put((int) '%',new Parser.Entry(1, 66));put(Tag.EQ,new Parser.Entry(1, 66));put(Tag.RSHIFT,new Parser.Entry(1, 66));put((int) '>',new Parser.Entry(1, 66));put((int) '^',new Parser.Entry(1, 66));put((int) '|',new Parser.Entry(1, 66));put((int) '<',new Parser.Entry(1, 66));put(Tag.LSHIFT,new Parser.Entry(1, 66));put(Tag.NE,new Parser.Entry(1, 66));put(Tag.AND,new Parser.Entry(1, 66));put(Tag.LE,new Parser.Entry(1, 66));put(Tag.GE,new Parser.Entry(1, 66));put((int) '/',new Parser.Entry(1, 66)); }} );
@@ -1576,191 +2601,1130 @@ public class Parser {
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 15));put((int) ',',new Parser.Entry(1, 15));put((int) '+',new Parser.Entry(1, 15));put(Tag.OR,new Parser.Entry(1, 15));put((int) '*',new Parser.Entry(1, 15));put((int) ')',new Parser.Entry(1, 15));put((int) '&',new Parser.Entry(1, 15));put((int) '%',new Parser.Entry(1, 15));put(Tag.EQ,new Parser.Entry(1, 15));put(Tag.RSHIFT,new Parser.Entry(1, 15));put((int) '^',new Parser.Entry(1, 15));put((int) '>',new Parser.Entry(1, 15));put((int) '<',new Parser.Entry(1, 15));put((int) '|',new Parser.Entry(1, 15));put(Tag.LSHIFT,new Parser.Entry(1, 15));put(Tag.NE,new Parser.Entry(1, 15));put(Tag.AND,new Parser.Entry(1, 15));put(Tag.LE,new Parser.Entry(1, 15));put(Tag.GE,new Parser.Entry(1, 15));put((int) '/',new Parser.Entry(1, 15)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 35));put((int) ',',new Parser.Entry(1, 35));put(Tag.OR,new Parser.Entry(1, 35));put((int) '+',new Parser.Entry(1, 35));put((int) '*',new Parser.Entry(1, 35));put((int) ')',new Parser.Entry(1, 35));put((int) '&',new Parser.Entry(1, 35));put((int) '%',new Parser.Entry(1, 35));put(Tag.EQ,new Parser.Entry(1, 35));put(Tag.RSHIFT,new Parser.Entry(1, 35));put((int) '>',new Parser.Entry(1, 35));put((int) '^',new Parser.Entry(1, 35));put((int) '|',new Parser.Entry(1, 35));put((int) '<',new Parser.Entry(1, 35));put(Tag.LSHIFT,new Parser.Entry(1, 35));put(Tag.NE,new Parser.Entry(1, 35));put(Tag.AND,new Parser.Entry(1, 35));put(Tag.LE,new Parser.Entry(1, 35));put(Tag.GE,new Parser.Entry(1, 35));put((int) '/',new Parser.Entry(1, 35)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put(Tag.OR,new Parser.Entry(0, 326));put((int) '+',new Parser.Entry(0, 379));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put((int) '^',new Parser.Entry(0, 128));put((int) '>',new Parser.Entry(0, 279));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '<',new Parser.Entry(0, 123));put((int) '|',new Parser.Entry(0, 215));put((int) ';',new Parser.Entry(0, 53));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '+', new Parser.Entry(0, 379));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put((int) '^', new Parser.Entry(0, 128));
+            put((int) '>', new Parser.Entry(0, 279));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) ';', new Parser.Entry(0, 53));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 54));put(Tag.RETURN,new Parser.Entry(1, 54));put((int) '}',new Parser.Entry(1, 54));put((int) '{',new Parser.Entry(1, 54));put(Tag.IDENT,new Parser.Entry(1, 54));put(Tag.BREAK,new Parser.Entry(1, 54));put(Tag.ELSE,new Parser.Entry(1, 54));put((int) '$',new Parser.Entry(1, 54));put(Tag.WHILE,new Parser.Entry(1, 54));put(Tag.IF,new Parser.Entry(1, 54)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 33));put((int) '+',new Parser.Entry(1, 33));put(Tag.OR,new Parser.Entry(1, 33));put((int) '*',new Parser.Entry(1, 33));put((int) ')',new Parser.Entry(1, 33));put((int) '&',new Parser.Entry(1, 33));put((int) '%',new Parser.Entry(1, 33));put(Tag.EQ,new Parser.Entry(1, 33));put(Tag.RSHIFT,new Parser.Entry(1, 33));put((int) '^',new Parser.Entry(1, 33));put((int) '>',new Parser.Entry(1, 33));put((int) '|',new Parser.Entry(1, 33));put((int) '<',new Parser.Entry(1, 33));put(Tag.LSHIFT,new Parser.Entry(1, 33));put(Tag.AND,new Parser.Entry(1, 33));put(Tag.NE,new Parser.Entry(1, 33));put(Tag.LE,new Parser.Entry(1, 33));put(Tag.GE,new Parser.Entry(1, 33));put((int) '/',new Parser.Entry(1, 33)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '-', new Parser.Entry(0, 89));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 73));put((int) ',',new Parser.Entry(1, 73));put(Tag.OR,new Parser.Entry(1, 73));put((int) '+',new Parser.Entry(1, 73));put((int) '*',new Parser.Entry(1, 73));put((int) ')',new Parser.Entry(1, 73));put((int) '&',new Parser.Entry(1, 73));put((int) '%',new Parser.Entry(1, 73));put(Tag.EQ,new Parser.Entry(1, 73));put((int) '^',new Parser.Entry(1, 73));put(Tag.RSHIFT,new Parser.Entry(1, 73));put((int) '>',new Parser.Entry(1, 73));put((int) '<',new Parser.Entry(1, 73));put((int) '|',new Parser.Entry(1, 73));put(Tag.LSHIFT,new Parser.Entry(1, 73));put(Tag.NE,new Parser.Entry(1, 73));put(Tag.AND,new Parser.Entry(1, 73));put(Tag.LE,new Parser.Entry(1, 73));put(Tag.GE,new Parser.Entry(1, 73));put((int) '/',new Parser.Entry(1, 73)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 23));put(Tag.OR,new Parser.Entry(1, 23));put((int) '+',new Parser.Entry(1, 23));put((int) '*',new Parser.Entry(1, 23));put((int) '&',new Parser.Entry(1, 23));put((int) '%',new Parser.Entry(1, 23));put(Tag.EQ,new Parser.Entry(1, 23));put((int) '^',new Parser.Entry(1, 23));put(Tag.RSHIFT,new Parser.Entry(1, 23));put((int) '>',new Parser.Entry(1, 23));put((int) ']',new Parser.Entry(1, 23));put((int) '<',new Parser.Entry(1, 23));put((int) '|',new Parser.Entry(1, 23));put(Tag.LSHIFT,new Parser.Entry(1, 23));put(Tag.AND,new Parser.Entry(1, 23));put(Tag.NE,new Parser.Entry(1, 23));put(Tag.LE,new Parser.Entry(1, 23));put(Tag.GE,new Parser.Entry(1, 23));put((int) '/',new Parser.Entry(1, 23)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 48));put((int) '+',new Parser.Entry(1, 48));put(Tag.OR,new Parser.Entry(1, 48));put((int) '*',new Parser.Entry(1, 48));put((int) '&',new Parser.Entry(1, 48));put((int) '%',new Parser.Entry(1, 48));put(Tag.EQ,new Parser.Entry(1, 48));put((int) '>',new Parser.Entry(1, 48));put((int) '^',new Parser.Entry(1, 48));put(Tag.RSHIFT,new Parser.Entry(1, 48));put((int) ']',new Parser.Entry(1, 48));put((int) '|',new Parser.Entry(1, 48));put((int) '<',new Parser.Entry(1, 48));put(Tag.LSHIFT,new Parser.Entry(1, 48));put(Tag.NE,new Parser.Entry(1, 48));put(Tag.AND,new Parser.Entry(1, 48));put(Tag.LE,new Parser.Entry(1, 48));put(Tag.GE,new Parser.Entry(1, 48));put((int) '/',new Parser.Entry(1, 48)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 23));
+            put(Tag.OR, new Parser.Entry(1, 23));
+            put((int) '+', new Parser.Entry(1, 23));
+            put((int) '*', new Parser.Entry(1, 23));
+            put((int) '&', new Parser.Entry(1, 23));
+            put((int) '%', new Parser.Entry(1, 23));
+            put(Tag.EQ, new Parser.Entry(1, 23));
+            put((int) '^', new Parser.Entry(1, 23));
+            put(Tag.RSHIFT, new Parser.Entry(1, 23));
+            put((int) '>', new Parser.Entry(1, 23));
+            put((int) ']', new Parser.Entry(1, 23));
+            put((int) '<', new Parser.Entry(1, 23));
+            put((int) '|', new Parser.Entry(1, 23));
+            put(Tag.LSHIFT, new Parser.Entry(1, 23));
+            put(Tag.AND, new Parser.Entry(1, 23));
+            put(Tag.NE, new Parser.Entry(1, 23));
+            put(Tag.LE, new Parser.Entry(1, 23));
+            put(Tag.GE, new Parser.Entry(1, 23));
+            put((int) '/', new Parser.Entry(1, 23));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 63));put((int) '+',new Parser.Entry(1, 63));put(Tag.OR,new Parser.Entry(1, 63));put((int) '*',new Parser.Entry(1, 63));put((int) '&',new Parser.Entry(1, 63));put((int) '%',new Parser.Entry(1, 63));put(Tag.EQ,new Parser.Entry(1, 63));put((int) '^',new Parser.Entry(1, 63));put((int) '>',new Parser.Entry(1, 63));put(Tag.RSHIFT,new Parser.Entry(1, 63));put((int) '<',new Parser.Entry(1, 63));put((int) '|',new Parser.Entry(1, 63));put((int) ';',new Parser.Entry(1, 63));put(Tag.LSHIFT,new Parser.Entry(1, 63));put(Tag.NE,new Parser.Entry(1, 63));put(Tag.AND,new Parser.Entry(1, 63));put(Tag.LE,new Parser.Entry(1, 63));put(Tag.GE,new Parser.Entry(1, 63));put((int) '/',new Parser.Entry(1, 63)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ')',new Parser.Entry(0, 420)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 21));put(Tag.OR,new Parser.Entry(1, 21));put((int) '+',new Parser.Entry(1, 21));put((int) '*',new Parser.Entry(1, 21));put((int) ')',new Parser.Entry(1, 21));put((int) '&',new Parser.Entry(1, 21));put((int) '%',new Parser.Entry(1, 21));put(Tag.EQ,new Parser.Entry(1, 21));put((int) '^',new Parser.Entry(1, 21));put((int) '>',new Parser.Entry(1, 21));put(Tag.RSHIFT,new Parser.Entry(1, 21));put((int) '|',new Parser.Entry(1, 21));put((int) '<',new Parser.Entry(1, 21));put(Tag.LSHIFT,new Parser.Entry(1, 21));put(Tag.AND,new Parser.Entry(1, 21));put(Tag.NE,new Parser.Entry(1, 21));put(Tag.LE,new Parser.Entry(1, 21));put(Tag.GE,new Parser.Entry(1, 21));put((int) '/',new Parser.Entry(1, 21)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 31));put(Tag.OR,new Parser.Entry(1, 31));put((int) '+',new Parser.Entry(1, 31));put((int) '*',new Parser.Entry(1, 31));put((int) '&',new Parser.Entry(1, 31));put((int) '%',new Parser.Entry(1, 31));put(Tag.EQ,new Parser.Entry(1, 31));put((int) '^',new Parser.Entry(1, 31));put((int) '>',new Parser.Entry(1, 31));put(Tag.RSHIFT,new Parser.Entry(1, 31));put((int) '|',new Parser.Entry(1, 31));put((int) '<',new Parser.Entry(1, 31));put((int) ';',new Parser.Entry(1, 31));put(Tag.LSHIFT,new Parser.Entry(1, 31));put(Tag.AND,new Parser.Entry(1, 31));put(Tag.NE,new Parser.Entry(1, 31));put(Tag.LE,new Parser.Entry(1, 31));put(Tag.GE,new Parser.Entry(1, 31));put((int) '/',new Parser.Entry(1, 31)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 30));
+            put(Tag.OR, new Parser.Entry(1, 30));
+            put((int) '+', new Parser.Entry(1, 30));
+            put((int) '*', new Parser.Entry(1, 30));
+            put((int) '&', new Parser.Entry(1, 30));
+            put((int) '%', new Parser.Entry(1, 30));
+            put(Tag.EQ, new Parser.Entry(1, 30));
+            put((int) '^', new Parser.Entry(1, 30));
+            put((int) '>', new Parser.Entry(1, 30));
+            put(Tag.RSHIFT, new Parser.Entry(1, 30));
+            put((int) '|', new Parser.Entry(1, 30));
+            put((int) '<', new Parser.Entry(1, 30));
+            put((int) ';', new Parser.Entry(1, 30));
+            put(Tag.LSHIFT, new Parser.Entry(1, 30));
+            put(Tag.AND, new Parser.Entry(1, 30));
+            put(Tag.NE, new Parser.Entry(1, 30));
+            put(Tag.LE, new Parser.Entry(1, 30));
+            put(Tag.GE, new Parser.Entry(1, 30));
+            put((int) '/', new Parser.Entry(1, 30));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 21));put((int) ',',new Parser.Entry(1, 21));put(Tag.OR,new Parser.Entry(1, 21));put((int) '+',new Parser.Entry(1, 21));put((int) '*',new Parser.Entry(1, 21));put((int) ')',new Parser.Entry(1, 21));put((int) '&',new Parser.Entry(1, 21));put((int) '%',new Parser.Entry(1, 21));put(Tag.EQ,new Parser.Entry(1, 21));put((int) '^',new Parser.Entry(1, 21));put((int) '>',new Parser.Entry(1, 21));put(Tag.RSHIFT,new Parser.Entry(1, 21));put((int) '|',new Parser.Entry(1, 21));put((int) '<',new Parser.Entry(1, 21));put(Tag.LSHIFT,new Parser.Entry(1, 21));put(Tag.AND,new Parser.Entry(1, 21));put(Tag.NE,new Parser.Entry(1, 21));put(Tag.LE,new Parser.Entry(1, 21));put(Tag.GE,new Parser.Entry(1, 21));put((int) '/',new Parser.Entry(1, 21)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 19));put((int) '+',new Parser.Entry(1, 19));put(Tag.OR,new Parser.Entry(1, 19));put((int) '*',new Parser.Entry(1, 19));put((int) ')',new Parser.Entry(1, 19));put((int) '&',new Parser.Entry(1, 19));put((int) '%',new Parser.Entry(1, 19));put(Tag.EQ,new Parser.Entry(1, 19));put(Tag.RSHIFT,new Parser.Entry(1, 19));put((int) '^',new Parser.Entry(1, 19));put((int) '>',new Parser.Entry(1, 19));put((int) '|',new Parser.Entry(1, 19));put((int) '<',new Parser.Entry(1, 19));put(Tag.LSHIFT,new Parser.Entry(1, 19));put(Tag.NE,new Parser.Entry(1, 19));put(Tag.AND,new Parser.Entry(1, 19));put(Tag.LE,new Parser.Entry(1, 19));put(Tag.GE,new Parser.Entry(1, 19));put((int) '/',new Parser.Entry(1, 19)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '-', new Parser.Entry(0, 75));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 11));put(Tag.RETURN,new Parser.Entry(1, 11));put((int) '}',new Parser.Entry(1, 11));put((int) '{',new Parser.Entry(1, 11));put(Tag.IDENT,new Parser.Entry(1, 11));put(Tag.BREAK,new Parser.Entry(1, 11));put(Tag.ELSE,new Parser.Entry(1, 11));put((int) '$',new Parser.Entry(1, 11));put(Tag.WHILE,new Parser.Entry(1, 11));put(Tag.IF,new Parser.Entry(1, 11)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 321));put(Tag.CONTINUE,new Parser.Entry(0, 257));put((int) '}',new Parser.Entry(0, 411));put(Tag.RETURN,new Parser.Entry(0, 356));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 311));put(Tag.BREAK,new Parser.Entry(0, 138));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 383)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 32));put((int) ',',new Parser.Entry(1, 32));put((int) '+',new Parser.Entry(1, 32));put(Tag.OR,new Parser.Entry(1, 32));put((int) '*',new Parser.Entry(1, 32));put((int) ')',new Parser.Entry(1, 32));put((int) '&',new Parser.Entry(1, 32));put((int) '%',new Parser.Entry(1, 32));put(Tag.EQ,new Parser.Entry(1, 32));put(Tag.RSHIFT,new Parser.Entry(1, 32));put((int) '^',new Parser.Entry(1, 32));put((int) '>',new Parser.Entry(1, 32));put((int) '|',new Parser.Entry(1, 32));put((int) '<',new Parser.Entry(1, 32));put(Tag.LSHIFT,new Parser.Entry(1, 32));put(Tag.NE,new Parser.Entry(1, 32));put(Tag.AND,new Parser.Entry(1, 32));put(Tag.LE,new Parser.Entry(1, 32));put(Tag.GE,new Parser.Entry(1, 32));put((int) '/',new Parser.Entry(1, 32)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '$', new Parser.Entry(0, 321));
+            put(Tag.CONTINUE, new Parser.Entry(0, 257));
+            put((int) '}', new Parser.Entry(0, 411));
+            put(Tag.RETURN, new Parser.Entry(0, 356));
+            put((int) '{', new Parser.Entry(0, 285));
+            put(Tag.IDENT, new Parser.Entry(0, 311));
+            put(Tag.BREAK, new Parser.Entry(0, 138));
+            put(Tag.WHILE, new Parser.Entry(0, 86));
+            put(Tag.IF, new Parser.Entry(0, 383));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 60));put(Tag.RETURN,new Parser.Entry(1, 60));put((int) '}',new Parser.Entry(1, 60));put((int) '{',new Parser.Entry(1, 60));put(Tag.IDENT,new Parser.Entry(1, 60));put(Tag.BREAK,new Parser.Entry(1, 60));put(Tag.WHILE,new Parser.Entry(1, 60));put((int) '$',new Parser.Entry(1, 60));put(Tag.IF,new Parser.Entry(1, 60)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 20));put((int) '+',new Parser.Entry(1, 20));put(Tag.OR,new Parser.Entry(1, 20));put((int) '*',new Parser.Entry(1, 20));put((int) '&',new Parser.Entry(1, 20));put((int) '%',new Parser.Entry(1, 20));put(Tag.EQ,new Parser.Entry(1, 20));put((int) '>',new Parser.Entry(1, 20));put((int) '^',new Parser.Entry(1, 20));put(Tag.RSHIFT,new Parser.Entry(1, 20));put((int) '=',new Parser.Entry(1, 20));put((int) '<',new Parser.Entry(1, 20));put((int) '|',new Parser.Entry(1, 20));put(Tag.LSHIFT,new Parser.Entry(1, 20));put(Tag.NE,new Parser.Entry(1, 20));put(Tag.AND,new Parser.Entry(1, 20));put(Tag.LE,new Parser.Entry(1, 20));put(Tag.GE,new Parser.Entry(1, 20));put((int) '/',new Parser.Entry(1, 20)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 19));put((int) '+',new Parser.Entry(1, 19));put(Tag.OR,new Parser.Entry(1, 19));put((int) '*',new Parser.Entry(1, 19));put((int) '&',new Parser.Entry(1, 19));put((int) '%',new Parser.Entry(1, 19));put(Tag.EQ,new Parser.Entry(1, 19));put(Tag.RSHIFT,new Parser.Entry(1, 19));put((int) '^',new Parser.Entry(1, 19));put((int) '>',new Parser.Entry(1, 19));put((int) ']',new Parser.Entry(1, 19));put((int) '|',new Parser.Entry(1, 19));put((int) '<',new Parser.Entry(1, 19));put(Tag.LSHIFT,new Parser.Entry(1, 19));put(Tag.NE,new Parser.Entry(1, 19));put(Tag.AND,new Parser.Entry(1, 19));put(Tag.LE,new Parser.Entry(1, 19));put(Tag.GE,new Parser.Entry(1, 19));put((int) '/',new Parser.Entry(1, 19)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 17));put(Tag.OR,new Parser.Entry(1, 17));put((int) '+',new Parser.Entry(1, 17));put((int) '*',new Parser.Entry(1, 17));put((int) '&',new Parser.Entry(1, 17));put((int) '%',new Parser.Entry(1, 17));put(Tag.EQ,new Parser.Entry(1, 17));put(Tag.RSHIFT,new Parser.Entry(1, 17));put((int) '^',new Parser.Entry(1, 17));put((int) '>',new Parser.Entry(1, 17));put((int) '<',new Parser.Entry(1, 17));put((int) '|',new Parser.Entry(1, 17));put((int) ';',new Parser.Entry(1, 17));put(Tag.LSHIFT,new Parser.Entry(1, 17));put(Tag.NE,new Parser.Entry(1, 17));put(Tag.AND,new Parser.Entry(1, 17));put(Tag.LE,new Parser.Entry(1, 17));put(Tag.GE,new Parser.Entry(1, 17));put((int) '/',new Parser.Entry(1, 17)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ']',new Parser.Entry(1, 41)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.VOID,new Parser.Entry(1, 55));put(Tag.INT,new Parser.Entry(1, 55)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 24));put((int) ',',new Parser.Entry(1, 24));put((int) '+',new Parser.Entry(1, 24));put(Tag.OR,new Parser.Entry(1, 24));put((int) '*',new Parser.Entry(1, 24));put((int) ')',new Parser.Entry(1, 24));put((int) '&',new Parser.Entry(1, 24));put((int) '%',new Parser.Entry(1, 24));put(Tag.EQ,new Parser.Entry(1, 24));put((int) '>',new Parser.Entry(1, 24));put((int) '^',new Parser.Entry(1, 24));put(Tag.RSHIFT,new Parser.Entry(1, 24));put((int) '|',new Parser.Entry(1, 24));put((int) '<',new Parser.Entry(1, 24));put(Tag.LSHIFT,new Parser.Entry(1, 24));put(Tag.NE,new Parser.Entry(1, 24));put(Tag.AND,new Parser.Entry(1, 24));put(Tag.LE,new Parser.Entry(1, 24));put(Tag.GE,new Parser.Entry(1, 24));put((int) '/',new Parser.Entry(1, 24)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 30));put((int) ',',new Parser.Entry(1, 30));put(Tag.OR,new Parser.Entry(1, 30));put((int) '+',new Parser.Entry(1, 30));put((int) '*',new Parser.Entry(1, 30));put((int) ')',new Parser.Entry(1, 30));put((int) '(',new Parser.Entry(0, 380));put((int) '&',new Parser.Entry(1, 30));put((int) '%',new Parser.Entry(1, 30));put(Tag.EQ,new Parser.Entry(1, 30));put((int) '^',new Parser.Entry(1, 30));put(Tag.RSHIFT,new Parser.Entry(1, 30));put((int) '>',new Parser.Entry(1, 30));put((int) '<',new Parser.Entry(1, 30));put((int) '|',new Parser.Entry(1, 30));put((int) '[',new Parser.Entry(0, 375));put(Tag.LSHIFT,new Parser.Entry(1, 30));put(Tag.NE,new Parser.Entry(1, 30));put(Tag.AND,new Parser.Entry(1, 30));put(Tag.LE,new Parser.Entry(1, 30));put(Tag.GE,new Parser.Entry(1, 30));put((int) '/',new Parser.Entry(1, 30)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 31));
+            put((int) ',', new Parser.Entry(1, 31));
+            put(Tag.OR, new Parser.Entry(1, 31));
+            put((int) '+', new Parser.Entry(1, 31));
+            put((int) '*', new Parser.Entry(1, 31));
+            put((int) ')', new Parser.Entry(1, 31));
+            put((int) '(', new Parser.Entry(0, 380));
+            put((int) '&', new Parser.Entry(1, 31));
+            put((int) '%', new Parser.Entry(1, 31));
+            put(Tag.EQ, new Parser.Entry(1, 31));
+            put((int) '^', new Parser.Entry(1, 31));
+            put(Tag.RSHIFT, new Parser.Entry(1, 31));
+            put((int) '>', new Parser.Entry(1, 31));
+            put((int) '<', new Parser.Entry(1, 31));
+            put((int) '|', new Parser.Entry(1, 31));
+            put((int) '[', new Parser.Entry(0, 374));
+            put(Tag.LSHIFT, new Parser.Entry(1, 31));
+            put(Tag.NE, new Parser.Entry(1, 31));
+            put(Tag.AND, new Parser.Entry(1, 31));
+            put(Tag.LE, new Parser.Entry(1, 31));
+            put(Tag.GE, new Parser.Entry(1, 31));
+            put((int) '/', new Parser.Entry(1, 31));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 14));put((int) '+',new Parser.Entry(1, 14));put(Tag.OR,new Parser.Entry(1, 14));put((int) '*',new Parser.Entry(1, 14));put((int) '&',new Parser.Entry(1, 14));put((int) '%',new Parser.Entry(1, 14));put(Tag.EQ,new Parser.Entry(1, 14));put(Tag.RSHIFT,new Parser.Entry(1, 14));put((int) '>',new Parser.Entry(1, 14));put((int) '^',new Parser.Entry(1, 14));put((int) '=',new Parser.Entry(1, 14));put((int) '|',new Parser.Entry(1, 14));put((int) '<',new Parser.Entry(1, 14));put(Tag.LSHIFT,new Parser.Entry(1, 14));put(Tag.AND,new Parser.Entry(1, 14));put(Tag.NE,new Parser.Entry(1, 14));put(Tag.LE,new Parser.Entry(1, 14));put(Tag.GE,new Parser.Entry(1, 14));put((int) '/',new Parser.Entry(1, 14)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '(',new Parser.Entry(0, 44)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 321));put(Tag.CONTINUE,new Parser.Entry(0, 257));put(Tag.RETURN,new Parser.Entry(0, 356));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 311));put(Tag.BREAK,new Parser.Entry(0, 138));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 383)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 51));put(Tag.OR,new Parser.Entry(1, 51));put((int) '+',new Parser.Entry(1, 51));put((int) '*',new Parser.Entry(1, 51));put((int) '&',new Parser.Entry(1, 51));put((int) '%',new Parser.Entry(1, 51));put(Tag.EQ,new Parser.Entry(1, 51));put(Tag.RSHIFT,new Parser.Entry(1, 51));put((int) '>',new Parser.Entry(1, 51));put((int) '^',new Parser.Entry(1, 51));put((int) ']',new Parser.Entry(1, 51));put((int) '|',new Parser.Entry(1, 51));put((int) '<',new Parser.Entry(1, 51));put(Tag.LSHIFT,new Parser.Entry(1, 51));put(Tag.NE,new Parser.Entry(1, 51));put(Tag.AND,new Parser.Entry(1, 51));put(Tag.LE,new Parser.Entry(1, 51));put(Tag.GE,new Parser.Entry(1, 51));put((int) '/',new Parser.Entry(1, 51)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 5));put((int) '}',new Parser.Entry(1, 5));put(Tag.RETURN,new Parser.Entry(1, 5));put((int) '{',new Parser.Entry(1, 5));put(Tag.IDENT,new Parser.Entry(1, 5));put(Tag.BREAK,new Parser.Entry(1, 5));put(Tag.ELSE,new Parser.Entry(1, 5));put(Tag.WHILE,new Parser.Entry(1, 5));put((int) '$',new Parser.Entry(1, 5));put(Tag.IF,new Parser.Entry(1, 5)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 75));put(Tag.OR,new Parser.Entry(1, 75));put((int) '+',new Parser.Entry(1, 75));put((int) '*',new Parser.Entry(1, 75));put((int) ')',new Parser.Entry(1, 75));put((int) '&',new Parser.Entry(1, 75));put((int) '%',new Parser.Entry(1, 75));put(Tag.EQ,new Parser.Entry(1, 75));put((int) '>',new Parser.Entry(1, 75));put((int) '^',new Parser.Entry(1, 75));put(Tag.RSHIFT,new Parser.Entry(1, 75));put((int) '|',new Parser.Entry(1, 75));put((int) '<',new Parser.Entry(1, 75));put(Tag.LSHIFT,new Parser.Entry(1, 75));put(Tag.AND,new Parser.Entry(1, 75));put(Tag.NE,new Parser.Entry(1, 75));put(Tag.LE,new Parser.Entry(1, 75));put(Tag.GE,new Parser.Entry(1, 75));put((int) '/',new Parser.Entry(1, 75)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put(Tag.CONTINUE, new Parser.Entry(1, 5));
+            put((int) '}', new Parser.Entry(1, 5));
+            put(Tag.RETURN, new Parser.Entry(1, 5));
+            put((int) '{', new Parser.Entry(1, 5));
+            put(Tag.IDENT, new Parser.Entry(1, 5));
+            put(Tag.BREAK, new Parser.Entry(1, 5));
+            put(Tag.ELSE, new Parser.Entry(1, 5));
+            put(Tag.WHILE, new Parser.Entry(1, 5));
+            put((int) '$', new Parser.Entry(1, 5));
+            put(Tag.IF, new Parser.Entry(1, 5));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 78));put((int) '+',new Parser.Entry(1, 78));put(Tag.OR,new Parser.Entry(1, 78));put((int) '*',new Parser.Entry(1, 78));put((int) '&',new Parser.Entry(1, 78));put((int) '%',new Parser.Entry(1, 78));put(Tag.EQ,new Parser.Entry(1, 78));put((int) '>',new Parser.Entry(1, 78));put((int) '^',new Parser.Entry(1, 78));put(Tag.RSHIFT,new Parser.Entry(1, 78));put((int) '=',new Parser.Entry(1, 78));put((int) '|',new Parser.Entry(1, 78));put((int) '<',new Parser.Entry(1, 78));put(Tag.LSHIFT,new Parser.Entry(1, 78));put(Tag.AND,new Parser.Entry(1, 78));put(Tag.NE,new Parser.Entry(1, 78));put(Tag.LE,new Parser.Entry(1, 78));put(Tag.GE,new Parser.Entry(1, 78));put((int) '/',new Parser.Entry(1, 78)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 57));put(Tag.RETURN,new Parser.Entry(1, 57));put((int) '{',new Parser.Entry(1, 57));put(Tag.IDENT,new Parser.Entry(1, 57));put(Tag.BREAK,new Parser.Entry(1, 57));put(Tag.WHILE,new Parser.Entry(1, 57));put((int) '$',new Parser.Entry(1, 57));put(Tag.VOID,new Parser.Entry(1, 57));put(Tag.IF,new Parser.Entry(1, 57));put(Tag.INT,new Parser.Entry(1, 57)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put((int) '-', new Parser.Entry(0, 32));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ')',new Parser.Entry(0, 219)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 2));put(Tag.RETURN,new Parser.Entry(1, 2));put((int) '{',new Parser.Entry(1, 2));put(Tag.IDENT,new Parser.Entry(1, 2));put(Tag.BREAK,new Parser.Entry(1, 2));put(Tag.WHILE,new Parser.Entry(1, 2));put((int) '$',new Parser.Entry(1, 2));put(Tag.VOID,new Parser.Entry(1, 2));put(Tag.IF,new Parser.Entry(1, 2));put(Tag.INT,new Parser.Entry(1, 2)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 169)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 14));put((int) ',',new Parser.Entry(1, 64));put(Tag.OR,new Parser.Entry(0, 333));put((int) '+',new Parser.Entry(0, 231));put((int) '*',new Parser.Entry(0, 101));put((int) ')',new Parser.Entry(1, 64));put((int) '&',new Parser.Entry(0, 112));put((int) '%',new Parser.Entry(0, 18));put(Tag.EQ,new Parser.Entry(0, 26));put((int) '^',new Parser.Entry(0, 29));put((int) '>',new Parser.Entry(0, 185));put(Tag.RSHIFT,new Parser.Entry(0, 97));put((int) '|',new Parser.Entry(0, 135));put((int) '<',new Parser.Entry(0, 297));put(Tag.LSHIFT,new Parser.Entry(0, 390));put(Tag.AND,new Parser.Entry(0, 246));put(Tag.NE,new Parser.Entry(0, 58));put(Tag.LE,new Parser.Entry(0, 276));put(Tag.GE,new Parser.Entry(0, 284));put((int) '/',new Parser.Entry(0, 226)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 14));
+            put((int) ',', new Parser.Entry(1, 64));
+            put(Tag.OR, new Parser.Entry(0, 333));
+            put((int) '+', new Parser.Entry(0, 231));
+            put((int) '*', new Parser.Entry(0, 101));
+            put((int) ')', new Parser.Entry(1, 64));
+            put((int) '&', new Parser.Entry(0, 112));
+            put((int) '%', new Parser.Entry(0, 18));
+            put(Tag.EQ, new Parser.Entry(0, 26));
+            put(Tag.RSHIFT, new Parser.Entry(0, 97));
+            put((int) '>', new Parser.Entry(0, 185));
+            put((int) '^', new Parser.Entry(0, 29));
+            put((int) '|', new Parser.Entry(0, 135));
+            put((int) '<', new Parser.Entry(0, 297));
+            put(Tag.LSHIFT, new Parser.Entry(0, 390));
+            put(Tag.AND, new Parser.Entry(0, 246));
+            put(Tag.NE, new Parser.Entry(0, 58));
+            put(Tag.LE, new Parser.Entry(0, 276));
+            put(Tag.GE, new Parser.Entry(0, 284));
+            put((int) '/', new Parser.Entry(0, 225));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 1));put(Tag.RETURN,new Parser.Entry(1, 1));put((int) '}',new Parser.Entry(1, 1));put((int) '{',new Parser.Entry(1, 1));put(Tag.IDENT,new Parser.Entry(1, 1));put(Tag.BREAK,new Parser.Entry(1, 1));put(Tag.WHILE,new Parser.Entry(1, 1));put((int) '$',new Parser.Entry(1, 1));put(Tag.IF,new Parser.Entry(1, 1)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 38));put((int) '+',new Parser.Entry(1, 38));put(Tag.OR,new Parser.Entry(1, 38));put((int) '*',new Parser.Entry(1, 38));put((int) ')',new Parser.Entry(1, 38));put((int) '&',new Parser.Entry(1, 38));put((int) '%',new Parser.Entry(1, 38));put(Tag.EQ,new Parser.Entry(1, 38));put((int) '^',new Parser.Entry(1, 38));put((int) '>',new Parser.Entry(1, 38));put(Tag.RSHIFT,new Parser.Entry(1, 38));put((int) '|',new Parser.Entry(1, 38));put((int) '<',new Parser.Entry(1, 38));put(Tag.LSHIFT,new Parser.Entry(1, 38));put(Tag.NE,new Parser.Entry(1, 38));put(Tag.AND,new Parser.Entry(1, 38));put(Tag.LE,new Parser.Entry(1, 38));put(Tag.GE,new Parser.Entry(1, 38));put((int) '/',new Parser.Entry(1, 38)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 35));put(Tag.OR,new Parser.Entry(1, 35));put((int) '+',new Parser.Entry(1, 35));put((int) '*',new Parser.Entry(1, 35));put((int) '&',new Parser.Entry(1, 35));put((int) '%',new Parser.Entry(1, 35));put(Tag.EQ,new Parser.Entry(1, 35));put(Tag.RSHIFT,new Parser.Entry(1, 35));put((int) '>',new Parser.Entry(1, 35));put((int) '^',new Parser.Entry(1, 35));put((int) '|',new Parser.Entry(1, 35));put((int) '<',new Parser.Entry(1, 35));put((int) ';',new Parser.Entry(1, 35));put(Tag.LSHIFT,new Parser.Entry(1, 35));put(Tag.NE,new Parser.Entry(1, 35));put(Tag.AND,new Parser.Entry(1, 35));put(Tag.LE,new Parser.Entry(1, 35));put(Tag.GE,new Parser.Entry(1, 35));put((int) '/',new Parser.Entry(1, 35)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '-',new Parser.Entry(0, 89));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put((int) '-', new Parser.Entry(0, 89));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 52));put((int) '+',new Parser.Entry(1, 52));put(Tag.OR,new Parser.Entry(1, 52));put((int) '*',new Parser.Entry(1, 52));put((int) '&',new Parser.Entry(1, 52));put((int) '%',new Parser.Entry(1, 52));put(Tag.EQ,new Parser.Entry(1, 52));put((int) '^',new Parser.Entry(1, 52));put((int) '>',new Parser.Entry(1, 52));put(Tag.RSHIFT,new Parser.Entry(1, 52));put((int) '=',new Parser.Entry(1, 52));put((int) '<',new Parser.Entry(1, 52));put((int) '|',new Parser.Entry(1, 52));put(Tag.LSHIFT,new Parser.Entry(1, 52));put(Tag.NE,new Parser.Entry(1, 52));put(Tag.AND,new Parser.Entry(1, 52));put(Tag.LE,new Parser.Entry(1, 52));put(Tag.GE,new Parser.Entry(1, 52));put((int) '/',new Parser.Entry(1, 52)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(2, -1)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 30));put(Tag.OR,new Parser.Entry(1, 30));put((int) '+',new Parser.Entry(1, 30));put((int) '*',new Parser.Entry(1, 30));put((int) '(',new Parser.Entry(0, 136));put((int) '&',new Parser.Entry(1, 30));put((int) '%',new Parser.Entry(1, 30));put(Tag.EQ,new Parser.Entry(1, 30));put((int) '^',new Parser.Entry(1, 30));put(Tag.RSHIFT,new Parser.Entry(1, 30));put((int) '>',new Parser.Entry(1, 30));put((int) '<',new Parser.Entry(1, 30));put((int) '|',new Parser.Entry(1, 30));put((int) ';',new Parser.Entry(1, 30));put((int) '[',new Parser.Entry(0, 110));put(Tag.LSHIFT,new Parser.Entry(1, 30));put(Tag.NE,new Parser.Entry(1, 30));put(Tag.AND,new Parser.Entry(1, 30));put(Tag.LE,new Parser.Entry(1, 30));put(Tag.GE,new Parser.Entry(1, 30));put((int) '/',new Parser.Entry(1, 30)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 31));
+            put(Tag.OR, new Parser.Entry(1, 31));
+            put((int) '+', new Parser.Entry(1, 31));
+            put((int) '*', new Parser.Entry(1, 31));
+            put((int) '(', new Parser.Entry(0, 136));
+            put((int) '&', new Parser.Entry(1, 31));
+            put((int) '%', new Parser.Entry(1, 31));
+            put(Tag.EQ, new Parser.Entry(1, 31));
+            put((int) '^', new Parser.Entry(1, 31));
+            put(Tag.RSHIFT, new Parser.Entry(1, 31));
+            put((int) '>', new Parser.Entry(1, 31));
+            put((int) '<', new Parser.Entry(1, 31));
+            put((int) '|', new Parser.Entry(1, 31));
+            put((int) ';', new Parser.Entry(1, 31));
+            put((int) '[', new Parser.Entry(0, 110));
+            put(Tag.LSHIFT, new Parser.Entry(1, 31));
+            put(Tag.NE, new Parser.Entry(1, 31));
+            put(Tag.AND, new Parser.Entry(1, 31));
+            put(Tag.LE, new Parser.Entry(1, 31));
+            put(Tag.GE, new Parser.Entry(1, 31));
+            put((int) '/', new Parser.Entry(1, 31));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 47));put((int) '+',new Parser.Entry(1, 47));put(Tag.OR,new Parser.Entry(1, 47));put((int) '*',new Parser.Entry(1, 47));put((int) '&',new Parser.Entry(1, 47));put((int) '%',new Parser.Entry(1, 47));put(Tag.EQ,new Parser.Entry(1, 47));put((int) '>',new Parser.Entry(1, 47));put((int) '^',new Parser.Entry(1, 47));put(Tag.RSHIFT,new Parser.Entry(1, 47));put((int) ']',new Parser.Entry(1, 47));put((int) '<',new Parser.Entry(1, 47));put((int) '|',new Parser.Entry(1, 47));put(Tag.LSHIFT,new Parser.Entry(1, 47));put(Tag.AND,new Parser.Entry(1, 47));put(Tag.NE,new Parser.Entry(1, 47));put(Tag.LE,new Parser.Entry(1, 47));put(Tag.GE,new Parser.Entry(1, 47));put((int) '/',new Parser.Entry(1, 47)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.IDENT,new Parser.Entry(1, 8));put((int) ')',new Parser.Entry(1, 71)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 33));put((int) ',',new Parser.Entry(1, 33));put((int) '+',new Parser.Entry(1, 33));put(Tag.OR,new Parser.Entry(1, 33));put((int) '*',new Parser.Entry(1, 33));put((int) ')',new Parser.Entry(1, 33));put((int) '&',new Parser.Entry(1, 33));put((int) '%',new Parser.Entry(1, 33));put(Tag.EQ,new Parser.Entry(1, 33));put(Tag.RSHIFT,new Parser.Entry(1, 33));put((int) '^',new Parser.Entry(1, 33));put((int) '>',new Parser.Entry(1, 33));put((int) '|',new Parser.Entry(1, 33));put((int) '<',new Parser.Entry(1, 33));put(Tag.LSHIFT,new Parser.Entry(1, 33));put(Tag.AND,new Parser.Entry(1, 33));put(Tag.NE,new Parser.Entry(1, 33));put(Tag.LE,new Parser.Entry(1, 33));put(Tag.GE,new Parser.Entry(1, 33));put((int) '/',new Parser.Entry(1, 33)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 40));put(Tag.VOID,new Parser.Entry(1, 40));put(Tag.INT,new Parser.Entry(1, 40)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 61));put((int) '+',new Parser.Entry(1, 61));put(Tag.OR,new Parser.Entry(1, 61));put((int) '*',new Parser.Entry(1, 61));put((int) '&',new Parser.Entry(1, 61));put((int) '%',new Parser.Entry(1, 61));put(Tag.EQ,new Parser.Entry(1, 61));put((int) '>',new Parser.Entry(1, 61));put(Tag.RSHIFT,new Parser.Entry(1, 61));put((int) '^',new Parser.Entry(1, 61));put((int) '<',new Parser.Entry(1, 61));put((int) '|',new Parser.Entry(1, 61));put((int) ';',new Parser.Entry(1, 61));put(Tag.LSHIFT,new Parser.Entry(1, 61));put(Tag.NE,new Parser.Entry(1, 61));put(Tag.AND,new Parser.Entry(1, 61));put(Tag.LE,new Parser.Entry(1, 61));put(Tag.GE,new Parser.Entry(1, 61));put((int) '/',new Parser.Entry(1, 61)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put(Tag.OR,new Parser.Entry(0, 326));put((int) '+',new Parser.Entry(0, 379));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put((int) '^',new Parser.Entry(0, 128));put((int) '>',new Parser.Entry(0, 279));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '<',new Parser.Entry(0, 123));put((int) '|',new Parser.Entry(0, 215));put((int) ';',new Parser.Entry(0, 132));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '+', new Parser.Entry(0, 379));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put((int) '^', new Parser.Entry(0, 128));
+            put((int) '>', new Parser.Entry(0, 279));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) ';', new Parser.Entry(0, 132));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ']',new Parser.Entry(0, 192)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 52));put((int) '+',new Parser.Entry(1, 52));put(Tag.OR,new Parser.Entry(1, 52));put((int) '*',new Parser.Entry(1, 52));put((int) '&',new Parser.Entry(1, 52));put((int) '%',new Parser.Entry(1, 52));put(Tag.EQ,new Parser.Entry(1, 52));put((int) '^',new Parser.Entry(1, 52));put((int) '>',new Parser.Entry(1, 52));put(Tag.RSHIFT,new Parser.Entry(1, 52));put((int) ']',new Parser.Entry(1, 52));put((int) '<',new Parser.Entry(1, 52));put((int) '|',new Parser.Entry(1, 52));put(Tag.LSHIFT,new Parser.Entry(1, 52));put(Tag.NE,new Parser.Entry(1, 52));put(Tag.AND,new Parser.Entry(1, 52));put(Tag.LE,new Parser.Entry(1, 52));put(Tag.GE,new Parser.Entry(1, 52));put((int) '/',new Parser.Entry(1, 52)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 402));put(Tag.CONTINUE,new Parser.Entry(0, 376));put(Tag.RETURN,new Parser.Entry(0, 103));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 300));put(Tag.BREAK,new Parser.Entry(0, 172));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 146)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 23));put(Tag.OR,new Parser.Entry(1, 23));put((int) '+',new Parser.Entry(1, 23));put((int) '*',new Parser.Entry(1, 23));put((int) '&',new Parser.Entry(1, 23));put((int) '%',new Parser.Entry(1, 23));put(Tag.EQ,new Parser.Entry(1, 23));put((int) '^',new Parser.Entry(1, 23));put(Tag.RSHIFT,new Parser.Entry(1, 23));put((int) '>',new Parser.Entry(1, 23));put((int) '=',new Parser.Entry(1, 23));put((int) '<',new Parser.Entry(1, 23));put((int) '|',new Parser.Entry(1, 23));put(Tag.LSHIFT,new Parser.Entry(1, 23));put(Tag.AND,new Parser.Entry(1, 23));put(Tag.NE,new Parser.Entry(1, 23));put(Tag.LE,new Parser.Entry(1, 23));put(Tag.GE,new Parser.Entry(1, 23));put((int) '/',new Parser.Entry(1, 23)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 41));put((int) '+',new Parser.Entry(0, 400));put(Tag.OR,new Parser.Entry(0, 287));put((int) '*',new Parser.Entry(0, 352));put((int) '&',new Parser.Entry(0, 126));put((int) '%',new Parser.Entry(0, 144));put(Tag.EQ,new Parser.Entry(0, 365));put((int) '>',new Parser.Entry(0, 288));put((int) '^',new Parser.Entry(0, 293));put(Tag.RSHIFT,new Parser.Entry(0, 153));put((int) ']',new Parser.Entry(0, 425));put((int) '<',new Parser.Entry(0, 182));put((int) '|',new Parser.Entry(0, 42));put(Tag.LSHIFT,new Parser.Entry(0, 154));put(Tag.AND,new Parser.Entry(0, 197));put(Tag.NE,new Parser.Entry(0, 78));put(Tag.LE,new Parser.Entry(0, 275));put(Tag.GE,new Parser.Entry(0, 282));put((int) '/',new Parser.Entry(0, 309)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '-', new Parser.Entry(0, 75));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 41));
+            put(Tag.OR, new Parser.Entry(0, 287));
+            put((int) '+', new Parser.Entry(0, 400));
+            put((int) '*', new Parser.Entry(0, 352));
+            put((int) '&', new Parser.Entry(0, 126));
+            put((int) '%', new Parser.Entry(0, 144));
+            put(Tag.EQ, new Parser.Entry(0, 365));
+            put((int) '>', new Parser.Entry(0, 288));
+            put((int) '^', new Parser.Entry(0, 293));
+            put(Tag.RSHIFT, new Parser.Entry(0, 153));
+            put((int) ']', new Parser.Entry(0, 424));
+            put((int) '<', new Parser.Entry(0, 181));
+            put((int) '|', new Parser.Entry(0, 42));
+            put(Tag.LSHIFT, new Parser.Entry(0, 154));
+            put(Tag.AND, new Parser.Entry(0, 197));
+            put(Tag.NE, new Parser.Entry(0, 78));
+            put(Tag.LE, new Parser.Entry(0, 275));
+            put(Tag.GE, new Parser.Entry(0, 282));
+            put((int) '/', new Parser.Entry(0, 309));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 55));put(Tag.RETURN,new Parser.Entry(1, 55));put((int) '{',new Parser.Entry(1, 55));put(Tag.IDENT,new Parser.Entry(1, 55));put(Tag.BREAK,new Parser.Entry(1, 55));put((int) '$',new Parser.Entry(1, 55));put(Tag.WHILE,new Parser.Entry(1, 55));put(Tag.IF,new Parser.Entry(1, 55)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 44));put(Tag.VOID,new Parser.Entry(1, 44));put(Tag.INT,new Parser.Entry(1, 44)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 200));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put((int) '>',new Parser.Entry(0, 206));put((int) '^',new Parser.Entry(0, 142));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '|',new Parser.Entry(0, 124));put((int) '<',new Parser.Entry(0, 150));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '+', new Parser.Entry(0, 319));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 200));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put((int) '>', new Parser.Entry(0, 206));
+            put((int) '^', new Parser.Entry(0, 142));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 29));put(Tag.RETURN,new Parser.Entry(1, 29));put((int) '}',new Parser.Entry(1, 29));put((int) '{',new Parser.Entry(1, 29));put(Tag.IDENT,new Parser.Entry(1, 29));put(Tag.BREAK,new Parser.Entry(1, 29));put(Tag.WHILE,new Parser.Entry(1, 29));put((int) '$',new Parser.Entry(1, 29));put(Tag.IF,new Parser.Entry(1, 29)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 65));put(Tag.RETURN,new Parser.Entry(1, 65));put((int) '}',new Parser.Entry(1, 65));put((int) '{',new Parser.Entry(1, 65));put(Tag.IDENT,new Parser.Entry(1, 65));put(Tag.BREAK,new Parser.Entry(1, 65));put(Tag.ELSE,new Parser.Entry(1, 65));put(Tag.WHILE,new Parser.Entry(1, 65));put((int) '$',new Parser.Entry(1, 65));put(Tag.IF,new Parser.Entry(1, 65)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 77));put(Tag.OR,new Parser.Entry(1, 77));put((int) '+',new Parser.Entry(1, 77));put((int) '*',new Parser.Entry(1, 77));put((int) '&',new Parser.Entry(1, 77));put((int) '%',new Parser.Entry(1, 77));put(Tag.EQ,new Parser.Entry(1, 77));put((int) '^',new Parser.Entry(1, 77));put((int) '>',new Parser.Entry(1, 77));put(Tag.RSHIFT,new Parser.Entry(1, 77));put((int) '<',new Parser.Entry(1, 77));put((int) '|',new Parser.Entry(1, 77));put((int) ';',new Parser.Entry(1, 77));put(Tag.LSHIFT,new Parser.Entry(1, 77));put(Tag.AND,new Parser.Entry(1, 77));put(Tag.NE,new Parser.Entry(1, 77));put(Tag.LE,new Parser.Entry(1, 77));put(Tag.GE,new Parser.Entry(1, 77));put((int) '/',new Parser.Entry(1, 77)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 31));put(Tag.OR,new Parser.Entry(1, 31));put((int) '+',new Parser.Entry(1, 31));put((int) '*',new Parser.Entry(1, 31));put((int) '&',new Parser.Entry(1, 31));put((int) '%',new Parser.Entry(1, 31));put(Tag.EQ,new Parser.Entry(1, 31));put((int) '^',new Parser.Entry(1, 31));put((int) '>',new Parser.Entry(1, 31));put(Tag.RSHIFT,new Parser.Entry(1, 31));put((int) '=',new Parser.Entry(1, 31));put((int) '|',new Parser.Entry(1, 31));put((int) '<',new Parser.Entry(1, 31));put(Tag.LSHIFT,new Parser.Entry(1, 31));put(Tag.AND,new Parser.Entry(1, 31));put(Tag.NE,new Parser.Entry(1, 31));put(Tag.LE,new Parser.Entry(1, 31));put(Tag.GE,new Parser.Entry(1, 31));put((int) '/',new Parser.Entry(1, 31)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 30));
+            put(Tag.OR, new Parser.Entry(1, 30));
+            put((int) '+', new Parser.Entry(1, 30));
+            put((int) '*', new Parser.Entry(1, 30));
+            put((int) '&', new Parser.Entry(1, 30));
+            put((int) '%', new Parser.Entry(1, 30));
+            put(Tag.EQ, new Parser.Entry(1, 30));
+            put((int) '^', new Parser.Entry(1, 30));
+            put((int) '>', new Parser.Entry(1, 30));
+            put(Tag.RSHIFT, new Parser.Entry(1, 30));
+            put((int) '=', new Parser.Entry(1, 30));
+            put((int) '|', new Parser.Entry(1, 30));
+            put((int) '<', new Parser.Entry(1, 30));
+            put(Tag.LSHIFT, new Parser.Entry(1, 30));
+            put(Tag.AND, new Parser.Entry(1, 30));
+            put(Tag.NE, new Parser.Entry(1, 30));
+            put(Tag.LE, new Parser.Entry(1, 30));
+            put(Tag.GE, new Parser.Entry(1, 30));
+            put((int) '/', new Parser.Entry(1, 30));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '{',new Parser.Entry(0, 234));put((int) ';',new Parser.Entry(0, 272)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 58));put(Tag.OR,new Parser.Entry(1, 58));put((int) '+',new Parser.Entry(1, 58));put((int) '*',new Parser.Entry(1, 58));put((int) '&',new Parser.Entry(1, 58));put((int) '%',new Parser.Entry(1, 58));put(Tag.EQ,new Parser.Entry(1, 58));put((int) '>',new Parser.Entry(1, 58));put((int) '^',new Parser.Entry(1, 58));put(Tag.RSHIFT,new Parser.Entry(1, 58));put((int) ']',new Parser.Entry(1, 58));put((int) '|',new Parser.Entry(1, 58));put((int) '<',new Parser.Entry(1, 58));put(Tag.LSHIFT,new Parser.Entry(1, 58));put(Tag.AND,new Parser.Entry(1, 58));put(Tag.NE,new Parser.Entry(1, 58));put(Tag.LE,new Parser.Entry(1, 58));put(Tag.GE,new Parser.Entry(1, 58));put((int) '/',new Parser.Entry(1, 58)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '=',new Parser.Entry(0, 418));put((int) '[',new Parser.Entry(0, 373));put((int) '(',new Parser.Entry(0, 430)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put(Tag.OR,new Parser.Entry(0, 326));put((int) '+',new Parser.Entry(0, 379));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put((int) '^',new Parser.Entry(0, 128));put((int) '>',new Parser.Entry(0, 279));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '<',new Parser.Entry(0, 123));put((int) '|',new Parser.Entry(0, 215));put((int) ';',new Parser.Entry(0, 209));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 30));put(Tag.OR,new Parser.Entry(1, 30));put((int) '+',new Parser.Entry(1, 30));put((int) '*',new Parser.Entry(1, 30));put((int) '(',new Parser.Entry(0, 111));put((int) '&',new Parser.Entry(1, 30));put((int) '%',new Parser.Entry(1, 30));put(Tag.EQ,new Parser.Entry(1, 30));put((int) '^',new Parser.Entry(1, 30));put(Tag.RSHIFT,new Parser.Entry(1, 30));put((int) '>',new Parser.Entry(1, 30));put((int) ']',new Parser.Entry(1, 30));put((int) '<',new Parser.Entry(1, 30));put((int) '|',new Parser.Entry(1, 30));put((int) '[',new Parser.Entry(0, 167));put(Tag.LSHIFT,new Parser.Entry(1, 30));put(Tag.NE,new Parser.Entry(1, 30));put(Tag.AND,new Parser.Entry(1, 30));put(Tag.LE,new Parser.Entry(1, 30));put(Tag.GE,new Parser.Entry(1, 30));put((int) '/',new Parser.Entry(1, 30)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 280));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put((int) '^',new Parser.Entry(0, 142));put((int) '>',new Parser.Entry(0, 206));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '|',new Parser.Entry(0, 124));put((int) '<',new Parser.Entry(0, 150));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '-',new Parser.Entry(0, 89));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put((int) '+', new Parser.Entry(0, 379));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put((int) '^', new Parser.Entry(0, 128));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '>', new Parser.Entry(0, 279));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) ';', new Parser.Entry(0, 209));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 31));
+            put(Tag.OR, new Parser.Entry(1, 31));
+            put((int) '+', new Parser.Entry(1, 31));
+            put((int) '*', new Parser.Entry(1, 31));
+            put((int) '(', new Parser.Entry(0, 111));
+            put((int) '&', new Parser.Entry(1, 31));
+            put((int) '%', new Parser.Entry(1, 31));
+            put(Tag.EQ, new Parser.Entry(1, 31));
+            put((int) '^', new Parser.Entry(1, 31));
+            put(Tag.RSHIFT, new Parser.Entry(1, 31));
+            put((int) '>', new Parser.Entry(1, 31));
+            put((int) ']', new Parser.Entry(1, 31));
+            put((int) '<', new Parser.Entry(1, 31));
+            put((int) '|', new Parser.Entry(1, 31));
+            put((int) '[', new Parser.Entry(0, 167));
+            put(Tag.LSHIFT, new Parser.Entry(1, 31));
+            put(Tag.NE, new Parser.Entry(1, 31));
+            put(Tag.AND, new Parser.Entry(1, 31));
+            put(Tag.LE, new Parser.Entry(1, 31));
+            put(Tag.GE, new Parser.Entry(1, 31));
+            put((int) '/', new Parser.Entry(1, 31));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '+', new Parser.Entry(0, 319));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 280));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put((int) '^', new Parser.Entry(0, 142));
+            put((int) '>', new Parser.Entry(0, 206));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put((int) '-', new Parser.Entry(0, 89));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 47));put((int) '+',new Parser.Entry(1, 47));put(Tag.OR,new Parser.Entry(1, 47));put((int) '*',new Parser.Entry(1, 47));put((int) ')',new Parser.Entry(1, 47));put((int) '&',new Parser.Entry(1, 47));put((int) '%',new Parser.Entry(1, 47));put(Tag.EQ,new Parser.Entry(1, 47));put((int) '>',new Parser.Entry(1, 47));put((int) '^',new Parser.Entry(1, 47));put(Tag.RSHIFT,new Parser.Entry(1, 47));put((int) '<',new Parser.Entry(1, 47));put((int) '|',new Parser.Entry(1, 47));put(Tag.LSHIFT,new Parser.Entry(1, 47));put(Tag.AND,new Parser.Entry(1, 47));put(Tag.NE,new Parser.Entry(1, 47));put(Tag.LE,new Parser.Entry(1, 47));put(Tag.GE,new Parser.Entry(1, 47));put((int) '/',new Parser.Entry(1, 47)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '-', new Parser.Entry(0, 32));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 9));put(Tag.OR,new Parser.Entry(1, 9));put((int) '+',new Parser.Entry(1, 9));put((int) '*',new Parser.Entry(1, 9));put((int) ')',new Parser.Entry(1, 9));put((int) '&',new Parser.Entry(1, 9));put((int) '%',new Parser.Entry(1, 9));put(Tag.EQ,new Parser.Entry(1, 9));put((int) '^',new Parser.Entry(1, 9));put(Tag.RSHIFT,new Parser.Entry(1, 9));put((int) '>',new Parser.Entry(1, 9));put((int) '|',new Parser.Entry(1, 9));put((int) '<',new Parser.Entry(1, 9));put(Tag.LSHIFT,new Parser.Entry(1, 9));put(Tag.AND,new Parser.Entry(1, 9));put(Tag.NE,new Parser.Entry(1, 9));put(Tag.LE,new Parser.Entry(1, 9));put(Tag.GE,new Parser.Entry(1, 9));put((int) '/',new Parser.Entry(1, 9)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 41));put(Tag.OR,new Parser.Entry(0, 287));put((int) '+',new Parser.Entry(0, 400));put((int) '*',new Parser.Entry(0, 352));put((int) '&',new Parser.Entry(0, 126));put((int) '%',new Parser.Entry(0, 144));put(Tag.EQ,new Parser.Entry(0, 365));put((int) '^',new Parser.Entry(0, 293));put((int) '>',new Parser.Entry(0, 288));put(Tag.RSHIFT,new Parser.Entry(0, 153));put((int) ']',new Parser.Entry(0, 45));put((int) '<',new Parser.Entry(0, 182));put((int) '|',new Parser.Entry(0, 42));put(Tag.LSHIFT,new Parser.Entry(0, 154));put(Tag.AND,new Parser.Entry(0, 197));put(Tag.NE,new Parser.Entry(0, 78));put(Tag.LE,new Parser.Entry(0, 275));put(Tag.GE,new Parser.Entry(0, 282));put((int) '/',new Parser.Entry(0, 309)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 41));
+            put(Tag.OR, new Parser.Entry(0, 287));
+            put((int) '+', new Parser.Entry(0, 400));
+            put((int) '*', new Parser.Entry(0, 352));
+            put((int) '&', new Parser.Entry(0, 126));
+            put((int) '%', new Parser.Entry(0, 144));
+            put(Tag.EQ, new Parser.Entry(0, 365));
+            put((int) '^', new Parser.Entry(0, 293));
+            put((int) '>', new Parser.Entry(0, 288));
+            put(Tag.RSHIFT, new Parser.Entry(0, 153));
+            put((int) ']', new Parser.Entry(0, 45));
+            put((int) '<', new Parser.Entry(0, 181));
+            put((int) '|', new Parser.Entry(0, 42));
+            put(Tag.LSHIFT, new Parser.Entry(0, 154));
+            put(Tag.AND, new Parser.Entry(0, 197));
+            put(Tag.NE, new Parser.Entry(0, 78));
+            put(Tag.LE, new Parser.Entry(0, 275));
+            put(Tag.GE, new Parser.Entry(0, 282));
+            put((int) '/', new Parser.Entry(0, 309));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 24));put((int) '+',new Parser.Entry(1, 24));put(Tag.OR,new Parser.Entry(1, 24));put((int) '*',new Parser.Entry(1, 24));put((int) ')',new Parser.Entry(1, 24));put((int) '&',new Parser.Entry(1, 24));put((int) '%',new Parser.Entry(1, 24));put(Tag.EQ,new Parser.Entry(1, 24));put((int) '>',new Parser.Entry(1, 24));put((int) '^',new Parser.Entry(1, 24));put(Tag.RSHIFT,new Parser.Entry(1, 24));put((int) '|',new Parser.Entry(1, 24));put((int) '<',new Parser.Entry(1, 24));put(Tag.LSHIFT,new Parser.Entry(1, 24));put(Tag.NE,new Parser.Entry(1, 24));put(Tag.AND,new Parser.Entry(1, 24));put(Tag.LE,new Parser.Entry(1, 24));put(Tag.GE,new Parser.Entry(1, 24));put((int) '/',new Parser.Entry(1, 24)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '=',new Parser.Entry(0, 28));put((int) '[',new Parser.Entry(0, 6));put((int) '(',new Parser.Entry(0, 173)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 17));put(Tag.OR,new Parser.Entry(1, 17));put((int) '+',new Parser.Entry(1, 17));put((int) '*',new Parser.Entry(1, 17));put((int) '&',new Parser.Entry(1, 17));put((int) '%',new Parser.Entry(1, 17));put(Tag.EQ,new Parser.Entry(1, 17));put(Tag.RSHIFT,new Parser.Entry(1, 17));put((int) '^',new Parser.Entry(1, 17));put((int) '>',new Parser.Entry(1, 17));put((int) '=',new Parser.Entry(1, 17));put((int) '<',new Parser.Entry(1, 17));put((int) '|',new Parser.Entry(1, 17));put(Tag.LSHIFT,new Parser.Entry(1, 17));put(Tag.NE,new Parser.Entry(1, 17));put(Tag.AND,new Parser.Entry(1, 17));put(Tag.LE,new Parser.Entry(1, 17));put(Tag.GE,new Parser.Entry(1, 17));put((int) '/',new Parser.Entry(1, 17)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 49));put((int) ',',new Parser.Entry(1, 49));put(Tag.OR,new Parser.Entry(1, 49));put((int) '+',new Parser.Entry(1, 49));put((int) '*',new Parser.Entry(1, 49));put((int) ')',new Parser.Entry(1, 49));put((int) '&',new Parser.Entry(1, 49));put((int) '%',new Parser.Entry(1, 49));put(Tag.EQ,new Parser.Entry(1, 49));put((int) '>',new Parser.Entry(1, 49));put(Tag.RSHIFT,new Parser.Entry(1, 49));put((int) '^',new Parser.Entry(1, 49));put((int) '|',new Parser.Entry(1, 49));put((int) '<',new Parser.Entry(1, 49));put(Tag.LSHIFT,new Parser.Entry(1, 49));put(Tag.AND,new Parser.Entry(1, 49));put(Tag.NE,new Parser.Entry(1, 49));put(Tag.LE,new Parser.Entry(1, 49));put(Tag.GE,new Parser.Entry(1, 49));put((int) '/',new Parser.Entry(1, 49)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ',',new Parser.Entry(1, 72));put((int) ')',new Parser.Entry(1, 72)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 51));put(Tag.OR,new Parser.Entry(1, 51));put((int) '+',new Parser.Entry(1, 51));put((int) '*',new Parser.Entry(1, 51));put((int) ')',new Parser.Entry(1, 51));put((int) '&',new Parser.Entry(1, 51));put((int) '%',new Parser.Entry(1, 51));put(Tag.EQ,new Parser.Entry(1, 51));put(Tag.RSHIFT,new Parser.Entry(1, 51));put((int) '>',new Parser.Entry(1, 51));put((int) '^',new Parser.Entry(1, 51));put((int) '|',new Parser.Entry(1, 51));put((int) '<',new Parser.Entry(1, 51));put(Tag.LSHIFT,new Parser.Entry(1, 51));put(Tag.NE,new Parser.Entry(1, 51));put(Tag.AND,new Parser.Entry(1, 51));put(Tag.LE,new Parser.Entry(1, 51));put(Tag.GE,new Parser.Entry(1, 51));put((int) '/',new Parser.Entry(1, 51)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 61));put((int) '+',new Parser.Entry(1, 61));put(Tag.OR,new Parser.Entry(1, 61));put((int) '*',new Parser.Entry(1, 61));put((int) '&',new Parser.Entry(1, 61));put((int) '%',new Parser.Entry(1, 61));put(Tag.EQ,new Parser.Entry(1, 61));put((int) '>',new Parser.Entry(1, 61));put(Tag.RSHIFT,new Parser.Entry(1, 61));put((int) '^',new Parser.Entry(1, 61));put((int) '=',new Parser.Entry(1, 61));put((int) '<',new Parser.Entry(1, 61));put((int) '|',new Parser.Entry(1, 61));put(Tag.LSHIFT,new Parser.Entry(1, 61));put(Tag.NE,new Parser.Entry(1, 61));put(Tag.AND,new Parser.Entry(1, 61));put(Tag.LE,new Parser.Entry(1, 61));put(Tag.GE,new Parser.Entry(1, 61));put((int) '/',new Parser.Entry(1, 61)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 73));put(Tag.OR,new Parser.Entry(1, 73));put((int) '+',new Parser.Entry(1, 73));put((int) '*',new Parser.Entry(1, 73));put((int) '&',new Parser.Entry(1, 73));put((int) '%',new Parser.Entry(1, 73));put(Tag.EQ,new Parser.Entry(1, 73));put((int) '^',new Parser.Entry(1, 73));put(Tag.RSHIFT,new Parser.Entry(1, 73));put((int) '>',new Parser.Entry(1, 73));put((int) ']',new Parser.Entry(1, 73));put((int) '<',new Parser.Entry(1, 73));put((int) '|',new Parser.Entry(1, 73));put(Tag.LSHIFT,new Parser.Entry(1, 73));put(Tag.NE,new Parser.Entry(1, 73));put(Tag.AND,new Parser.Entry(1, 73));put(Tag.LE,new Parser.Entry(1, 73));put(Tag.GE,new Parser.Entry(1, 73));put((int) '/',new Parser.Entry(1, 73)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 131));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put((int) '^',new Parser.Entry(0, 142));put((int) '>',new Parser.Entry(0, 206));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '|',new Parser.Entry(0, 124));put((int) '<',new Parser.Entry(0, 150));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '+', new Parser.Entry(0, 319));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 130));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '^', new Parser.Entry(0, 142));
+            put((int) '>', new Parser.Entry(0, 206));
+            put((int) '|', new Parser.Entry(0, 124));
+            put((int) '<', new Parser.Entry(0, 150));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put((int) '-', new Parser.Entry(0, 32));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 45));put(Tag.RETURN,new Parser.Entry(1, 45));put((int) '}',new Parser.Entry(1, 45));put((int) '{',new Parser.Entry(1, 45));put(Tag.IDENT,new Parser.Entry(1, 45));put(Tag.BREAK,new Parser.Entry(1, 45));put(Tag.ELSE,new Parser.Entry(1, 45));put((int) '$',new Parser.Entry(1, 45));put(Tag.WHILE,new Parser.Entry(1, 45));put(Tag.IF,new Parser.Entry(1, 45)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 402));put(Tag.CONTINUE,new Parser.Entry(0, 376));put(Tag.RETURN,new Parser.Entry(0, 103));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 300));put(Tag.BREAK,new Parser.Entry(0, 172));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 146)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 25));put((int) '+',new Parser.Entry(1, 25));put(Tag.OR,new Parser.Entry(1, 25));put((int) '*',new Parser.Entry(1, 25));put((int) '&',new Parser.Entry(1, 25));put((int) '%',new Parser.Entry(1, 25));put(Tag.EQ,new Parser.Entry(1, 25));put(Tag.RSHIFT,new Parser.Entry(1, 25));put((int) '>',new Parser.Entry(1, 25));put((int) '^',new Parser.Entry(1, 25));put((int) ']',new Parser.Entry(1, 25));put((int) '<',new Parser.Entry(1, 25));put((int) '|',new Parser.Entry(1, 25));put(Tag.LSHIFT,new Parser.Entry(1, 25));put(Tag.NE,new Parser.Entry(1, 25));put(Tag.AND,new Parser.Entry(1, 25));put(Tag.LE,new Parser.Entry(1, 25));put(Tag.GE,new Parser.Entry(1, 25));put((int) '/',new Parser.Entry(1, 25)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 12));put((int) '+',new Parser.Entry(0, 379));put(Tag.OR,new Parser.Entry(0, 326));put((int) '*',new Parser.Entry(0, 96));put((int) '&',new Parser.Entry(0, 143));put((int) '%',new Parser.Entry(0, 93));put(Tag.EQ,new Parser.Entry(0, 408));put((int) '^',new Parser.Entry(0, 128));put(Tag.RSHIFT,new Parser.Entry(0, 98));put((int) '>',new Parser.Entry(0, 279));put((int) '|',new Parser.Entry(0, 215));put((int) '<',new Parser.Entry(0, 123));put((int) ';',new Parser.Entry(0, 188));put(Tag.LSHIFT,new Parser.Entry(0, 108));put(Tag.NE,new Parser.Entry(0, 362));put(Tag.AND,new Parser.Entry(0, 267));put(Tag.LE,new Parser.Entry(0, 236));put(Tag.GE,new Parser.Entry(0, 190));put((int) '/',new Parser.Entry(0, 357)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 10));
+            put(Tag.OR, new Parser.Entry(0, 326));
+            put((int) '+', new Parser.Entry(0, 379));
+            put((int) '*', new Parser.Entry(0, 96));
+            put((int) '&', new Parser.Entry(0, 143));
+            put((int) '%', new Parser.Entry(0, 93));
+            put(Tag.EQ, new Parser.Entry(0, 408));
+            put((int) '>', new Parser.Entry(0, 279));
+            put(Tag.RSHIFT, new Parser.Entry(0, 98));
+            put((int) '^', new Parser.Entry(0, 128));
+            put((int) '|', new Parser.Entry(0, 215));
+            put((int) '<', new Parser.Entry(0, 123));
+            put((int) ';', new Parser.Entry(0, 188));
+            put(Tag.LSHIFT, new Parser.Entry(0, 108));
+            put(Tag.AND, new Parser.Entry(0, 267));
+            put(Tag.NE, new Parser.Entry(0, 362));
+            put(Tag.LE, new Parser.Entry(0, 236));
+            put(Tag.GE, new Parser.Entry(0, 190));
+            put((int) '/', new Parser.Entry(0, 357));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 419));put(Tag.OR,new Parser.Entry(0, 260));put((int) '+',new Parser.Entry(0, 318));put((int) '*',new Parser.Entry(0, 20));put((int) ')',new Parser.Entry(0, 174));put((int) '&',new Parser.Entry(0, 332));put((int) '%',new Parser.Entry(0, 10));put(Tag.EQ,new Parser.Entry(0, 5));put(Tag.RSHIFT,new Parser.Entry(0, 313));put((int) '>',new Parser.Entry(0, 206));put((int) '^',new Parser.Entry(0, 142));put((int) '|',new Parser.Entry(0, 124));put((int) '<',new Parser.Entry(0, 150));put(Tag.LSHIFT,new Parser.Entry(0, 181));put(Tag.NE,new Parser.Entry(0, 410));put(Tag.AND,new Parser.Entry(0, 334));put(Tag.LE,new Parser.Entry(0, 409));put(Tag.GE,new Parser.Entry(0, 130));put((int) '/',new Parser.Entry(0, 387)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 419));
+            put(Tag.OR, new Parser.Entry(0, 260));
+            put((int) '+', new Parser.Entry(0, 319));
+            put((int) '*', new Parser.Entry(0, 20));
+            put((int) ')', new Parser.Entry(0, 174));
+            put((int) '&', new Parser.Entry(0, 332));
+            put((int) '%', new Parser.Entry(0, 11));
+            put(Tag.EQ, new Parser.Entry(0, 5));
+            put((int) '^', new Parser.Entry(0, 142));
+            put((int) '>', new Parser.Entry(0, 206));
+            put(Tag.RSHIFT, new Parser.Entry(0, 313));
+            put((int) '<', new Parser.Entry(0, 150));
+            put((int) '|', new Parser.Entry(0, 124));
+            put(Tag.LSHIFT, new Parser.Entry(0, 182));
+            put(Tag.NE, new Parser.Entry(0, 410));
+            put(Tag.AND, new Parser.Entry(0, 334));
+            put(Tag.LE, new Parser.Entry(0, 409));
+            put(Tag.GE, new Parser.Entry(0, 131));
+            put((int) '/', new Parser.Entry(0, 387));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 24));put((int) '+',new Parser.Entry(1, 24));put(Tag.OR,new Parser.Entry(1, 24));put((int) '*',new Parser.Entry(1, 24));put((int) '&',new Parser.Entry(1, 24));put((int) '%',new Parser.Entry(1, 24));put(Tag.EQ,new Parser.Entry(1, 24));put((int) '>',new Parser.Entry(1, 24));put((int) '^',new Parser.Entry(1, 24));put(Tag.RSHIFT,new Parser.Entry(1, 24));put((int) ']',new Parser.Entry(1, 24));put((int) '|',new Parser.Entry(1, 24));put((int) '<',new Parser.Entry(1, 24));put(Tag.LSHIFT,new Parser.Entry(1, 24));put(Tag.NE,new Parser.Entry(1, 24));put(Tag.AND,new Parser.Entry(1, 24));put(Tag.LE,new Parser.Entry(1, 24));put(Tag.GE,new Parser.Entry(1, 24));put((int) '/',new Parser.Entry(1, 24)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 20));put((int) ',',new Parser.Entry(1, 20));put((int) '+',new Parser.Entry(1, 20));put(Tag.OR,new Parser.Entry(1, 20));put((int) '*',new Parser.Entry(1, 20));put((int) ')',new Parser.Entry(1, 20));put((int) '&',new Parser.Entry(1, 20));put((int) '%',new Parser.Entry(1, 20));put(Tag.EQ,new Parser.Entry(1, 20));put((int) '>',new Parser.Entry(1, 20));put((int) '^',new Parser.Entry(1, 20));put(Tag.RSHIFT,new Parser.Entry(1, 20));put((int) '<',new Parser.Entry(1, 20));put((int) '|',new Parser.Entry(1, 20));put(Tag.LSHIFT,new Parser.Entry(1, 20));put(Tag.NE,new Parser.Entry(1, 20));put(Tag.AND,new Parser.Entry(1, 20));put(Tag.LE,new Parser.Entry(1, 20));put(Tag.GE,new Parser.Entry(1, 20));put((int) '/',new Parser.Entry(1, 20)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 41));put((int) '+',new Parser.Entry(1, 41));put(Tag.OR,new Parser.Entry(1, 41));put((int) '*',new Parser.Entry(1, 41));put((int) '&',new Parser.Entry(1, 41));put((int) '%',new Parser.Entry(1, 41));put(Tag.EQ,new Parser.Entry(1, 41));put((int) '^',new Parser.Entry(1, 41));put((int) '>',new Parser.Entry(1, 41));put(Tag.RSHIFT,new Parser.Entry(1, 41));put((int) '|',new Parser.Entry(1, 41));put((int) '<',new Parser.Entry(1, 41));put((int) ';',new Parser.Entry(1, 41));put(Tag.LSHIFT,new Parser.Entry(1, 41));put(Tag.AND,new Parser.Entry(1, 41));put(Tag.NE,new Parser.Entry(1, 41));put(Tag.LE,new Parser.Entry(1, 41));put(Tag.GE,new Parser.Entry(1, 41));put((int) '/',new Parser.Entry(1, 41)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put((int) '-',new Parser.Entry(0, 158));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 14));put((int) '+',new Parser.Entry(1, 14));put(Tag.OR,new Parser.Entry(1, 14));put((int) '*',new Parser.Entry(1, 14));put((int) '&',new Parser.Entry(1, 14));put((int) '%',new Parser.Entry(1, 14));put(Tag.EQ,new Parser.Entry(1, 14));put(Tag.RSHIFT,new Parser.Entry(1, 14));put((int) '>',new Parser.Entry(1, 14));put((int) '^',new Parser.Entry(1, 14));put((int) '|',new Parser.Entry(1, 14));put((int) '<',new Parser.Entry(1, 14));put((int) ';',new Parser.Entry(1, 14));put(Tag.LSHIFT,new Parser.Entry(1, 14));put(Tag.AND,new Parser.Entry(1, 14));put(Tag.NE,new Parser.Entry(1, 14));put(Tag.LE,new Parser.Entry(1, 14));put(Tag.GE,new Parser.Entry(1, 14));put((int) '/',new Parser.Entry(1, 14)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put((int) '-', new Parser.Entry(0, 32));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 32));put((int) '+',new Parser.Entry(1, 32));put(Tag.OR,new Parser.Entry(1, 32));put((int) '*',new Parser.Entry(1, 32));put((int) '&',new Parser.Entry(1, 32));put((int) '%',new Parser.Entry(1, 32));put(Tag.EQ,new Parser.Entry(1, 32));put(Tag.RSHIFT,new Parser.Entry(1, 32));put((int) '^',new Parser.Entry(1, 32));put((int) '>',new Parser.Entry(1, 32));put((int) ']',new Parser.Entry(1, 32));put((int) '|',new Parser.Entry(1, 32));put((int) '<',new Parser.Entry(1, 32));put(Tag.LSHIFT,new Parser.Entry(1, 32));put(Tag.NE,new Parser.Entry(1, 32));put(Tag.AND,new Parser.Entry(1, 32));put(Tag.LE,new Parser.Entry(1, 32));put(Tag.GE,new Parser.Entry(1, 32));put((int) '/',new Parser.Entry(1, 32)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 36));put(Tag.VOID,new Parser.Entry(1, 36));put(Tag.INT,new Parser.Entry(1, 36)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 25));put((int) '+',new Parser.Entry(1, 25));put(Tag.OR,new Parser.Entry(1, 25));put((int) '*',new Parser.Entry(1, 25));put((int) '&',new Parser.Entry(1, 25));put((int) '%',new Parser.Entry(1, 25));put(Tag.EQ,new Parser.Entry(1, 25));put(Tag.RSHIFT,new Parser.Entry(1, 25));put((int) '>',new Parser.Entry(1, 25));put((int) '^',new Parser.Entry(1, 25));put((int) '=',new Parser.Entry(1, 25));put((int) '<',new Parser.Entry(1, 25));put((int) '|',new Parser.Entry(1, 25));put(Tag.LSHIFT,new Parser.Entry(1, 25));put(Tag.NE,new Parser.Entry(1, 25));put(Tag.AND,new Parser.Entry(1, 25));put(Tag.LE,new Parser.Entry(1, 25));put(Tag.GE,new Parser.Entry(1, 25));put((int) '/',new Parser.Entry(1, 25)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 14));put((int) '+',new Parser.Entry(1, 14));put(Tag.OR,new Parser.Entry(1, 14));put((int) '*',new Parser.Entry(1, 14));put((int) '&',new Parser.Entry(1, 14));put((int) '%',new Parser.Entry(1, 14));put(Tag.EQ,new Parser.Entry(1, 14));put(Tag.RSHIFT,new Parser.Entry(1, 14));put((int) '>',new Parser.Entry(1, 14));put((int) '^',new Parser.Entry(1, 14));put((int) ']',new Parser.Entry(1, 14));put((int) '|',new Parser.Entry(1, 14));put((int) '<',new Parser.Entry(1, 14));put(Tag.LSHIFT,new Parser.Entry(1, 14));put(Tag.AND,new Parser.Entry(1, 14));put(Tag.NE,new Parser.Entry(1, 14));put(Tag.LE,new Parser.Entry(1, 14));put(Tag.GE,new Parser.Entry(1, 14));put((int) '/',new Parser.Entry(1, 14)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 321));put(Tag.CONTINUE,new Parser.Entry(0, 257));put((int) '}',new Parser.Entry(0, 360));put(Tag.RETURN,new Parser.Entry(0, 356));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 311));put(Tag.BREAK,new Parser.Entry(0, 138));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 383)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 31));put((int) ',',new Parser.Entry(1, 31));put(Tag.OR,new Parser.Entry(1, 31));put((int) '+',new Parser.Entry(1, 31));put((int) '*',new Parser.Entry(1, 31));put((int) ')',new Parser.Entry(1, 31));put((int) '&',new Parser.Entry(1, 31));put((int) '%',new Parser.Entry(1, 31));put(Tag.EQ,new Parser.Entry(1, 31));put((int) '^',new Parser.Entry(1, 31));put((int) '>',new Parser.Entry(1, 31));put(Tag.RSHIFT,new Parser.Entry(1, 31));put((int) '|',new Parser.Entry(1, 31));put((int) '<',new Parser.Entry(1, 31));put(Tag.LSHIFT,new Parser.Entry(1, 31));put(Tag.AND,new Parser.Entry(1, 31));put(Tag.NE,new Parser.Entry(1, 31));put(Tag.LE,new Parser.Entry(1, 31));put(Tag.GE,new Parser.Entry(1, 31));put((int) '/',new Parser.Entry(1, 31)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '$', new Parser.Entry(0, 321));
+            put(Tag.CONTINUE, new Parser.Entry(0, 257));
+            put(Tag.RETURN, new Parser.Entry(0, 356));
+            put((int) '}', new Parser.Entry(0, 360));
+            put((int) '{', new Parser.Entry(0, 285));
+            put(Tag.IDENT, new Parser.Entry(0, 311));
+            put(Tag.BREAK, new Parser.Entry(0, 138));
+            put(Tag.WHILE, new Parser.Entry(0, 86));
+            put(Tag.IF, new Parser.Entry(0, 383));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 30));
+            put((int) ',', new Parser.Entry(1, 30));
+            put(Tag.OR, new Parser.Entry(1, 30));
+            put((int) '+', new Parser.Entry(1, 30));
+            put((int) '*', new Parser.Entry(1, 30));
+            put((int) ')', new Parser.Entry(1, 30));
+            put((int) '&', new Parser.Entry(1, 30));
+            put((int) '%', new Parser.Entry(1, 30));
+            put(Tag.EQ, new Parser.Entry(1, 30));
+            put((int) '^', new Parser.Entry(1, 30));
+            put((int) '>', new Parser.Entry(1, 30));
+            put(Tag.RSHIFT, new Parser.Entry(1, 30));
+            put((int) '|', new Parser.Entry(1, 30));
+            put((int) '<', new Parser.Entry(1, 30));
+            put(Tag.LSHIFT, new Parser.Entry(1, 30));
+            put(Tag.AND, new Parser.Entry(1, 30));
+            put(Tag.NE, new Parser.Entry(1, 30));
+            put(Tag.LE, new Parser.Entry(1, 30));
+            put(Tag.GE, new Parser.Entry(1, 30));
+            put((int) '/', new Parser.Entry(1, 30));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 348)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put((int) ')',new Parser.Entry(1, 4));put((int) '(',new Parser.Entry(0, 251));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88));put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put(Tag.IDENT,new Parser.Entry(0, 238));put(Tag.HEXNUM,new Parser.Entry(0, 82)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 58));put(Tag.OR,new Parser.Entry(1, 58));put((int) '+',new Parser.Entry(1, 58));put((int) '*',new Parser.Entry(1, 58));put((int) '&',new Parser.Entry(1, 58));put((int) '%',new Parser.Entry(1, 58));put(Tag.EQ,new Parser.Entry(1, 58));put((int) '>',new Parser.Entry(1, 58));put((int) '^',new Parser.Entry(1, 58));put(Tag.RSHIFT,new Parser.Entry(1, 58));put((int) '=',new Parser.Entry(1, 58));put((int) '|',new Parser.Entry(1, 58));put((int) '<',new Parser.Entry(1, 58));put(Tag.LSHIFT,new Parser.Entry(1, 58));put(Tag.AND,new Parser.Entry(1, 58));put(Tag.NE,new Parser.Entry(1, 58));put(Tag.LE,new Parser.Entry(1, 58));put(Tag.GE,new Parser.Entry(1, 58));put((int) '/',new Parser.Entry(1, 58)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 91));
+            put((int) '+', new Parser.Entry(0, 239));
+            put((int) ')', new Parser.Entry(1, 4));
+            put((int) '(', new Parser.Entry(0, 251));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+            put((int) '~', new Parser.Entry(0, 388));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 66));put(Tag.OR,new Parser.Entry(1, 66));put((int) '+',new Parser.Entry(1, 66));put((int) '*',new Parser.Entry(1, 66));put((int) '&',new Parser.Entry(1, 66));put((int) '%',new Parser.Entry(1, 66));put(Tag.EQ,new Parser.Entry(1, 66));put(Tag.RSHIFT,new Parser.Entry(1, 66));put((int) '>',new Parser.Entry(1, 66));put((int) '^',new Parser.Entry(1, 66));put((int) '=',new Parser.Entry(1, 66));put((int) '|',new Parser.Entry(1, 66));put((int) '<',new Parser.Entry(1, 66));put(Tag.LSHIFT,new Parser.Entry(1, 66));put(Tag.NE,new Parser.Entry(1, 66));put(Tag.AND,new Parser.Entry(1, 66));put(Tag.LE,new Parser.Entry(1, 66));put(Tag.GE,new Parser.Entry(1, 66));put((int) '/',new Parser.Entry(1, 66)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 58));
+            put(Tag.OR, new Parser.Entry(1, 58));
+            put((int) '+', new Parser.Entry(1, 58));
+            put((int) '*', new Parser.Entry(1, 58));
+            put((int) '&', new Parser.Entry(1, 58));
+            put((int) '%', new Parser.Entry(1, 58));
+            put(Tag.EQ, new Parser.Entry(1, 58));
+            put((int) '>', new Parser.Entry(1, 58));
+            put((int) '^', new Parser.Entry(1, 58));
+            put(Tag.RSHIFT, new Parser.Entry(1, 58));
+            put((int) '=', new Parser.Entry(1, 58));
+            put((int) '|', new Parser.Entry(1, 58));
+            put((int) '<', new Parser.Entry(1, 58));
+            put(Tag.LSHIFT, new Parser.Entry(1, 58));
+            put(Tag.AND, new Parser.Entry(1, 58));
+            put(Tag.NE, new Parser.Entry(1, 58));
+            put(Tag.LE, new Parser.Entry(1, 58));
+            put(Tag.GE, new Parser.Entry(1, 58));
+            put((int) '/', new Parser.Entry(1, 58));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 25));put((int) '+',new Parser.Entry(1, 25));put(Tag.OR,new Parser.Entry(1, 25));put((int) '*',new Parser.Entry(1, 25));put((int) ')',new Parser.Entry(1, 25));put((int) '&',new Parser.Entry(1, 25));put((int) '%',new Parser.Entry(1, 25));put(Tag.EQ,new Parser.Entry(1, 25));put(Tag.RSHIFT,new Parser.Entry(1, 25));put((int) '>',new Parser.Entry(1, 25));put((int) '^',new Parser.Entry(1, 25));put((int) '<',new Parser.Entry(1, 25));put((int) '|',new Parser.Entry(1, 25));put(Tag.LSHIFT,new Parser.Entry(1, 25));put(Tag.NE,new Parser.Entry(1, 25));put(Tag.AND,new Parser.Entry(1, 25));put(Tag.LE,new Parser.Entry(1, 25));put(Tag.GE,new Parser.Entry(1, 25));put((int) '/',new Parser.Entry(1, 25)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 29));put(Tag.RETURN,new Parser.Entry(1, 29));put((int) '}',new Parser.Entry(1, 29));put((int) '{',new Parser.Entry(1, 29));put(Tag.IDENT,new Parser.Entry(1, 29));put(Tag.BREAK,new Parser.Entry(1, 29));put(Tag.ELSE,new Parser.Entry(1, 29));put(Tag.WHILE,new Parser.Entry(1, 29));put((int) '$',new Parser.Entry(1, 29));put(Tag.IF,new Parser.Entry(1, 29)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 1));put(Tag.RETURN,new Parser.Entry(1, 1));put((int) '}',new Parser.Entry(1, 1));put((int) '{',new Parser.Entry(1, 1));put(Tag.IDENT,new Parser.Entry(1, 1));put(Tag.BREAK,new Parser.Entry(1, 1));put(Tag.ELSE,new Parser.Entry(1, 1));put(Tag.WHILE,new Parser.Entry(1, 1));put((int) '$',new Parser.Entry(1, 1));put(Tag.IF,new Parser.Entry(1, 1)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 30));put(Tag.OR,new Parser.Entry(1, 30));put((int) '+',new Parser.Entry(1, 30));put((int) '*',new Parser.Entry(1, 30));put((int) '(',new Parser.Entry(0, 344));put((int) '&',new Parser.Entry(1, 30));put((int) '%',new Parser.Entry(1, 30));put(Tag.EQ,new Parser.Entry(1, 30));put((int) '^',new Parser.Entry(1, 30));put(Tag.RSHIFT,new Parser.Entry(1, 30));put((int) '>',new Parser.Entry(1, 30));put((int) '=',new Parser.Entry(1, 30));put((int) '<',new Parser.Entry(1, 30));put((int) '|',new Parser.Entry(1, 30));put((int) '[',new Parser.Entry(0, 149));put(Tag.LSHIFT,new Parser.Entry(1, 30));put(Tag.NE,new Parser.Entry(1, 30));put(Tag.AND,new Parser.Entry(1, 30));put(Tag.LE,new Parser.Entry(1, 30));put(Tag.GE,new Parser.Entry(1, 30));put((int) '/',new Parser.Entry(1, 30)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 31));
+            put(Tag.OR, new Parser.Entry(1, 31));
+            put((int) '+', new Parser.Entry(1, 31));
+            put((int) '*', new Parser.Entry(1, 31));
+            put((int) '(', new Parser.Entry(0, 344));
+            put((int) '&', new Parser.Entry(1, 31));
+            put((int) '%', new Parser.Entry(1, 31));
+            put(Tag.EQ, new Parser.Entry(1, 31));
+            put((int) '^', new Parser.Entry(1, 31));
+            put(Tag.RSHIFT, new Parser.Entry(1, 31));
+            put((int) '>', new Parser.Entry(1, 31));
+            put((int) '=', new Parser.Entry(1, 31));
+            put((int) '<', new Parser.Entry(1, 31));
+            put((int) '|', new Parser.Entry(1, 31));
+            put((int) '[', new Parser.Entry(0, 149));
+            put(Tag.LSHIFT, new Parser.Entry(1, 31));
+            put(Tag.NE, new Parser.Entry(1, 31));
+            put(Tag.AND, new Parser.Entry(1, 31));
+            put(Tag.LE, new Parser.Entry(1, 31));
+            put(Tag.GE, new Parser.Entry(1, 31));
+            put((int) '/', new Parser.Entry(1, 31));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 23));put(Tag.OR,new Parser.Entry(1, 23));put((int) '+',new Parser.Entry(1, 23));put((int) '*',new Parser.Entry(1, 23));put((int) '&',new Parser.Entry(1, 23));put((int) '%',new Parser.Entry(1, 23));put(Tag.EQ,new Parser.Entry(1, 23));put((int) '^',new Parser.Entry(1, 23));put(Tag.RSHIFT,new Parser.Entry(1, 23));put((int) '>',new Parser.Entry(1, 23));put((int) '<',new Parser.Entry(1, 23));put((int) '|',new Parser.Entry(1, 23));put((int) ';',new Parser.Entry(1, 23));put(Tag.LSHIFT,new Parser.Entry(1, 23));put(Tag.AND,new Parser.Entry(1, 23));put(Tag.NE,new Parser.Entry(1, 23));put(Tag.LE,new Parser.Entry(1, 23));put(Tag.GE,new Parser.Entry(1, 23));put((int) '/',new Parser.Entry(1, 23)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 63));put((int) '+',new Parser.Entry(1, 63));put(Tag.OR,new Parser.Entry(1, 63));put((int) '*',new Parser.Entry(1, 63));put((int) '&',new Parser.Entry(1, 63));put((int) '%',new Parser.Entry(1, 63));put(Tag.EQ,new Parser.Entry(1, 63));put((int) '^',new Parser.Entry(1, 63));put((int) '>',new Parser.Entry(1, 63));put(Tag.RSHIFT,new Parser.Entry(1, 63));put((int) ']',new Parser.Entry(1, 63));put((int) '<',new Parser.Entry(1, 63));put((int) '|',new Parser.Entry(1, 63));put(Tag.LSHIFT,new Parser.Entry(1, 63));put(Tag.NE,new Parser.Entry(1, 63));put(Tag.AND,new Parser.Entry(1, 63));put(Tag.LE,new Parser.Entry(1, 63));put(Tag.GE,new Parser.Entry(1, 63));put((int) '/',new Parser.Entry(1, 63)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 9));put(Tag.OR,new Parser.Entry(1, 9));put((int) '+',new Parser.Entry(1, 9));put((int) '*',new Parser.Entry(1, 9));put((int) '&',new Parser.Entry(1, 9));put((int) '%',new Parser.Entry(1, 9));put(Tag.EQ,new Parser.Entry(1, 9));put((int) '^',new Parser.Entry(1, 9));put(Tag.RSHIFT,new Parser.Entry(1, 9));put((int) '>',new Parser.Entry(1, 9));put((int) ']',new Parser.Entry(1, 9));put((int) '|',new Parser.Entry(1, 9));put((int) '<',new Parser.Entry(1, 9));put(Tag.LSHIFT,new Parser.Entry(1, 9));put(Tag.AND,new Parser.Entry(1, 9));put(Tag.NE,new Parser.Entry(1, 9));put(Tag.LE,new Parser.Entry(1, 9));put(Tag.GE,new Parser.Entry(1, 9));put((int) '/',new Parser.Entry(1, 9)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '-',new Parser.Entry(0, 89));put((int) ';',new Parser.Entry(0, 19));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '-',new Parser.Entry(0, 89));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put((int) '-', new Parser.Entry(0, 89));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '+', new Parser.Entry(0, 184));
+            put((int) ';', new Parser.Entry(0, 19));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put((int) '-', new Parser.Entry(0, 89));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.DECNUM,new Parser.Entry(0, 233));put(Tag.HEXNUM,new Parser.Entry(0, 161)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 77));put(Tag.OR,new Parser.Entry(1, 77));put((int) '+',new Parser.Entry(1, 77));put((int) '*',new Parser.Entry(1, 77));put((int) '&',new Parser.Entry(1, 77));put((int) '%',new Parser.Entry(1, 77));put(Tag.EQ,new Parser.Entry(1, 77));put((int) '^',new Parser.Entry(1, 77));put((int) '>',new Parser.Entry(1, 77));put(Tag.RSHIFT,new Parser.Entry(1, 77));put((int) '=',new Parser.Entry(1, 77));put((int) '<',new Parser.Entry(1, 77));put((int) '|',new Parser.Entry(1, 77));put(Tag.LSHIFT,new Parser.Entry(1, 77));put(Tag.AND,new Parser.Entry(1, 77));put(Tag.NE,new Parser.Entry(1, 77));put(Tag.LE,new Parser.Entry(1, 77));put(Tag.GE,new Parser.Entry(1, 77));put((int) '/',new Parser.Entry(1, 77)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 46));put(Tag.RETURN,new Parser.Entry(1, 46));put((int) '}',new Parser.Entry(1, 46));put((int) '{',new Parser.Entry(1, 46));put(Tag.IDENT,new Parser.Entry(1, 46));put(Tag.BREAK,new Parser.Entry(1, 46));put(Tag.ELSE,new Parser.Entry(1, 46));put((int) '$',new Parser.Entry(1, 46));put(Tag.WHILE,new Parser.Entry(1, 46));put(Tag.IF,new Parser.Entry(1, 46)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 73));put(Tag.OR,new Parser.Entry(1, 73));put((int) '+',new Parser.Entry(1, 73));put((int) '*',new Parser.Entry(1, 73));put((int) '&',new Parser.Entry(1, 73));put((int) '%',new Parser.Entry(1, 73));put(Tag.EQ,new Parser.Entry(1, 73));put((int) '^',new Parser.Entry(1, 73));put(Tag.RSHIFT,new Parser.Entry(1, 73));put((int) '>',new Parser.Entry(1, 73));put((int) '=',new Parser.Entry(1, 73));put((int) '<',new Parser.Entry(1, 73));put((int) '|',new Parser.Entry(1, 73));put(Tag.LSHIFT,new Parser.Entry(1, 73));put(Tag.NE,new Parser.Entry(1, 73));put(Tag.AND,new Parser.Entry(1, 73));put(Tag.LE,new Parser.Entry(1, 73));put(Tag.GE,new Parser.Entry(1, 73));put((int) '/',new Parser.Entry(1, 73)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 51));put((int) ',',new Parser.Entry(1, 51));put(Tag.OR,new Parser.Entry(1, 51));put((int) '+',new Parser.Entry(1, 51));put((int) '*',new Parser.Entry(1, 51));put((int) ')',new Parser.Entry(1, 51));put((int) '&',new Parser.Entry(1, 51));put((int) '%',new Parser.Entry(1, 51));put(Tag.EQ,new Parser.Entry(1, 51));put(Tag.RSHIFT,new Parser.Entry(1, 51));put((int) '>',new Parser.Entry(1, 51));put((int) '^',new Parser.Entry(1, 51));put((int) '|',new Parser.Entry(1, 51));put((int) '<',new Parser.Entry(1, 51));put(Tag.LSHIFT,new Parser.Entry(1, 51));put(Tag.NE,new Parser.Entry(1, 51));put(Tag.AND,new Parser.Entry(1, 51));put(Tag.LE,new Parser.Entry(1, 51));put(Tag.GE,new Parser.Entry(1, 51));put((int) '/',new Parser.Entry(1, 51)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 17));put((int) ',',new Parser.Entry(1, 17));put(Tag.OR,new Parser.Entry(1, 17));put((int) '+',new Parser.Entry(1, 17));put((int) '*',new Parser.Entry(1, 17));put((int) ')',new Parser.Entry(1, 17));put((int) '&',new Parser.Entry(1, 17));put((int) '%',new Parser.Entry(1, 17));put(Tag.EQ,new Parser.Entry(1, 17));put(Tag.RSHIFT,new Parser.Entry(1, 17));put((int) '^',new Parser.Entry(1, 17));put((int) '>',new Parser.Entry(1, 17));put((int) '<',new Parser.Entry(1, 17));put((int) '|',new Parser.Entry(1, 17));put(Tag.LSHIFT,new Parser.Entry(1, 17));put(Tag.NE,new Parser.Entry(1, 17));put(Tag.AND,new Parser.Entry(1, 17));put(Tag.LE,new Parser.Entry(1, 17));put(Tag.GE,new Parser.Entry(1, 17));put((int) '/',new Parser.Entry(1, 17)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.IDENT,new Parser.Entry(1, 8)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 31));put(Tag.OR,new Parser.Entry(1, 31));put((int) '+',new Parser.Entry(1, 31));put((int) '*',new Parser.Entry(1, 31));put((int) '&',new Parser.Entry(1, 31));put((int) '%',new Parser.Entry(1, 31));put(Tag.EQ,new Parser.Entry(1, 31));put((int) '^',new Parser.Entry(1, 31));put((int) '>',new Parser.Entry(1, 31));put(Tag.RSHIFT,new Parser.Entry(1, 31));put((int) ']',new Parser.Entry(1, 31));put((int) '|',new Parser.Entry(1, 31));put((int) '<',new Parser.Entry(1, 31));put(Tag.LSHIFT,new Parser.Entry(1, 31));put(Tag.AND,new Parser.Entry(1, 31));put(Tag.NE,new Parser.Entry(1, 31));put(Tag.LE,new Parser.Entry(1, 31));put(Tag.GE,new Parser.Entry(1, 31));put((int) '/',new Parser.Entry(1, 31)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put((int) ')',new Parser.Entry(1, 4));put((int) '(',new Parser.Entry(0, 251));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88));put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put(Tag.IDENT,new Parser.Entry(0, 238));put(Tag.HEXNUM,new Parser.Entry(0, 82)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 30));
+            put(Tag.OR, new Parser.Entry(1, 30));
+            put((int) '+', new Parser.Entry(1, 30));
+            put((int) '*', new Parser.Entry(1, 30));
+            put((int) '&', new Parser.Entry(1, 30));
+            put((int) '%', new Parser.Entry(1, 30));
+            put(Tag.EQ, new Parser.Entry(1, 30));
+            put((int) '^', new Parser.Entry(1, 30));
+            put((int) '>', new Parser.Entry(1, 30));
+            put(Tag.RSHIFT, new Parser.Entry(1, 30));
+            put((int) ']', new Parser.Entry(1, 30));
+            put((int) '|', new Parser.Entry(1, 30));
+            put((int) '<', new Parser.Entry(1, 30));
+            put(Tag.LSHIFT, new Parser.Entry(1, 30));
+            put(Tag.AND, new Parser.Entry(1, 30));
+            put(Tag.NE, new Parser.Entry(1, 30));
+            put(Tag.LE, new Parser.Entry(1, 30));
+            put(Tag.GE, new Parser.Entry(1, 30));
+            put((int) '/', new Parser.Entry(1, 30));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 91));
+            put((int) '+', new Parser.Entry(0, 239));
+            put((int) ')', new Parser.Entry(1, 4));
+            put((int) '(', new Parser.Entry(0, 251));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+            put((int) '~', new Parser.Entry(0, 388));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 66));put(Tag.OR,new Parser.Entry(1, 66));put((int) '+',new Parser.Entry(1, 66));put((int) '*',new Parser.Entry(1, 66));put((int) '&',new Parser.Entry(1, 66));put((int) '%',new Parser.Entry(1, 66));put(Tag.EQ,new Parser.Entry(1, 66));put(Tag.RSHIFT,new Parser.Entry(1, 66));put((int) '>',new Parser.Entry(1, 66));put((int) '^',new Parser.Entry(1, 66));put((int) '|',new Parser.Entry(1, 66));put((int) '<',new Parser.Entry(1, 66));put((int) ';',new Parser.Entry(1, 66));put(Tag.LSHIFT,new Parser.Entry(1, 66));put(Tag.NE,new Parser.Entry(1, 66));put(Tag.AND,new Parser.Entry(1, 66));put(Tag.LE,new Parser.Entry(1, 66));put(Tag.GE,new Parser.Entry(1, 66));put((int) '/',new Parser.Entry(1, 66)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 41));put((int) ',',new Parser.Entry(1, 41));put((int) '+',new Parser.Entry(1, 41));put(Tag.OR,new Parser.Entry(1, 41));put((int) '*',new Parser.Entry(1, 41));put((int) ')',new Parser.Entry(1, 41));put((int) '&',new Parser.Entry(1, 41));put((int) '%',new Parser.Entry(1, 41));put(Tag.EQ,new Parser.Entry(1, 41));put((int) '^',new Parser.Entry(1, 41));put((int) '>',new Parser.Entry(1, 41));put(Tag.RSHIFT,new Parser.Entry(1, 41));put((int) '|',new Parser.Entry(1, 41));put((int) '<',new Parser.Entry(1, 41));put(Tag.LSHIFT,new Parser.Entry(1, 41));put(Tag.AND,new Parser.Entry(1, 41));put(Tag.NE,new Parser.Entry(1, 41));put(Tag.LE,new Parser.Entry(1, 41));put(Tag.GE,new Parser.Entry(1, 41));put((int) '/',new Parser.Entry(1, 41)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 32));put((int) '+',new Parser.Entry(1, 32));put(Tag.OR,new Parser.Entry(1, 32));put((int) '*',new Parser.Entry(1, 32));put((int) ')',new Parser.Entry(1, 32));put((int) '&',new Parser.Entry(1, 32));put((int) '%',new Parser.Entry(1, 32));put(Tag.EQ,new Parser.Entry(1, 32));put(Tag.RSHIFT,new Parser.Entry(1, 32));put((int) '^',new Parser.Entry(1, 32));put((int) '>',new Parser.Entry(1, 32));put((int) '|',new Parser.Entry(1, 32));put((int) '<',new Parser.Entry(1, 32));put(Tag.LSHIFT,new Parser.Entry(1, 32));put(Tag.NE,new Parser.Entry(1, 32));put(Tag.AND,new Parser.Entry(1, 32));put(Tag.LE,new Parser.Entry(1, 32));put(Tag.GE,new Parser.Entry(1, 32));put((int) '/',new Parser.Entry(1, 32)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ')',new Parser.Entry(0, 35)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 247)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 14));put((int) ',',new Parser.Entry(1, 26));put((int) '+',new Parser.Entry(0, 231));put(Tag.OR,new Parser.Entry(0, 333));put((int) '*',new Parser.Entry(0, 101));put((int) ')',new Parser.Entry(1, 26));put((int) '&',new Parser.Entry(0, 112));put((int) '%',new Parser.Entry(0, 18));put(Tag.EQ,new Parser.Entry(0, 26));put(Tag.RSHIFT,new Parser.Entry(0, 97));put((int) '>',new Parser.Entry(0, 185));put((int) '^',new Parser.Entry(0, 29));put((int) '|',new Parser.Entry(0, 135));put((int) '<',new Parser.Entry(0, 297));put(Tag.LSHIFT,new Parser.Entry(0, 390));put(Tag.AND,new Parser.Entry(0, 246));put(Tag.NE,new Parser.Entry(0, 58));put(Tag.LE,new Parser.Entry(0, 276));put(Tag.GE,new Parser.Entry(0, 284));put((int) '/',new Parser.Entry(0, 226)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) ';', new Parser.Entry(0, 249));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 14));
+            put((int) ',', new Parser.Entry(1, 26));
+            put(Tag.OR, new Parser.Entry(0, 333));
+            put((int) '+', new Parser.Entry(0, 231));
+            put((int) '*', new Parser.Entry(0, 101));
+            put((int) ')', new Parser.Entry(1, 26));
+            put((int) '&', new Parser.Entry(0, 112));
+            put((int) '%', new Parser.Entry(0, 18));
+            put(Tag.EQ, new Parser.Entry(0, 26));
+            put((int) '^', new Parser.Entry(0, 29));
+            put((int) '>', new Parser.Entry(0, 185));
+            put(Tag.RSHIFT, new Parser.Entry(0, 97));
+            put((int) '|', new Parser.Entry(0, 135));
+            put((int) '<', new Parser.Entry(0, 297));
+            put(Tag.LSHIFT, new Parser.Entry(0, 390));
+            put(Tag.AND, new Parser.Entry(0, 246));
+            put(Tag.NE, new Parser.Entry(0, 58));
+            put(Tag.LE, new Parser.Entry(0, 276));
+            put(Tag.GE, new Parser.Entry(0, 284));
+            put((int) '/', new Parser.Entry(0, 225));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 338)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put((int) ')',new Parser.Entry(1, 4));put((int) '(',new Parser.Entry(0, 251));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88));put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put(Tag.IDENT,new Parser.Entry(0, 238));put(Tag.HEXNUM,new Parser.Entry(0, 82)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 91));
+            put((int) '+', new Parser.Entry(0, 239));
+            put((int) ')', new Parser.Entry(1, 4));
+            put((int) '(', new Parser.Entry(0, 251));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+            put((int) '~', new Parser.Entry(0, 388));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 22));put(Tag.VOID,new Parser.Entry(0, 367));put(Tag.INT,new Parser.Entry(0, 83)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 20));put((int) '+',new Parser.Entry(1, 20));put(Tag.OR,new Parser.Entry(1, 20));put((int) '*',new Parser.Entry(1, 20));put((int) '&',new Parser.Entry(1, 20));put((int) '%',new Parser.Entry(1, 20));put(Tag.EQ,new Parser.Entry(1, 20));put((int) '>',new Parser.Entry(1, 20));put((int) '^',new Parser.Entry(1, 20));put(Tag.RSHIFT,new Parser.Entry(1, 20));put((int) ']',new Parser.Entry(1, 20));put((int) '<',new Parser.Entry(1, 20));put((int) '|',new Parser.Entry(1, 20));put(Tag.LSHIFT,new Parser.Entry(1, 20));put(Tag.NE,new Parser.Entry(1, 20));put(Tag.AND,new Parser.Entry(1, 20));put(Tag.LE,new Parser.Entry(1, 20));put(Tag.GE,new Parser.Entry(1, 20));put((int) '/',new Parser.Entry(1, 20)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '(',new Parser.Entry(0, 243)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 66));put(Tag.OR,new Parser.Entry(1, 66));put((int) '+',new Parser.Entry(1, 66));put((int) '*',new Parser.Entry(1, 66));put((int) '&',new Parser.Entry(1, 66));put((int) '%',new Parser.Entry(1, 66));put(Tag.EQ,new Parser.Entry(1, 66));put(Tag.RSHIFT,new Parser.Entry(1, 66));put((int) '>',new Parser.Entry(1, 66));put((int) '^',new Parser.Entry(1, 66));put((int) ']',new Parser.Entry(1, 66));put((int) '|',new Parser.Entry(1, 66));put((int) '<',new Parser.Entry(1, 66));put(Tag.LSHIFT,new Parser.Entry(1, 66));put(Tag.NE,new Parser.Entry(1, 66));put(Tag.AND,new Parser.Entry(1, 66));put(Tag.LE,new Parser.Entry(1, 66));put(Tag.GE,new Parser.Entry(1, 66));put((int) '/',new Parser.Entry(1, 66)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '-',new Parser.Entry(0, 89));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put((int) '-', new Parser.Entry(0, 89));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 33));put((int) '+',new Parser.Entry(1, 33));put(Tag.OR,new Parser.Entry(1, 33));put((int) '*',new Parser.Entry(1, 33));put((int) '&',new Parser.Entry(1, 33));put((int) '%',new Parser.Entry(1, 33));put(Tag.EQ,new Parser.Entry(1, 33));put(Tag.RSHIFT,new Parser.Entry(1, 33));put((int) '^',new Parser.Entry(1, 33));put((int) '>',new Parser.Entry(1, 33));put((int) '|',new Parser.Entry(1, 33));put((int) '<',new Parser.Entry(1, 33));put((int) ';',new Parser.Entry(1, 33));put(Tag.LSHIFT,new Parser.Entry(1, 33));put(Tag.AND,new Parser.Entry(1, 33));put(Tag.NE,new Parser.Entry(1, 33));put(Tag.LE,new Parser.Entry(1, 33));put(Tag.GE,new Parser.Entry(1, 33));put((int) '/',new Parser.Entry(1, 33)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '-',new Parser.Entry(0, 32));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 388));put((int) '-',new Parser.Entry(0, 91));put(Tag.DECNUM,new Parser.Entry(0, 371));put((int) '+',new Parser.Entry(0, 239));put(Tag.IDENT,new Parser.Entry(0, 238));put((int) '(',new Parser.Entry(0, 251));put(Tag.HEXNUM,new Parser.Entry(0, 82));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 7));
+            put((int) '-', new Parser.Entry(0, 32));
+            put(Tag.DECNUM, new Parser.Entry(0, 118));
+            put((int) '+', new Parser.Entry(0, 104));
+            put(Tag.IDENT, new Parser.Entry(0, 350));
+            put((int) '(', new Parser.Entry(0, 57));
+            put(Tag.HEXNUM, new Parser.Entry(0, 339));
+            put((int) '$', new Parser.Entry(0, 440));
+            put((int) '!', new Parser.Entry(0, 253));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 388));
+            put((int) '-', new Parser.Entry(0, 91));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put((int) '+', new Parser.Entry(0, 239));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put((int) '(', new Parser.Entry(0, 251));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 407));put((int) '[',new Parser.Entry(0, 446)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 15));put((int) '+',new Parser.Entry(1, 15));put(Tag.OR,new Parser.Entry(1, 15));put((int) '*',new Parser.Entry(1, 15));put((int) '&',new Parser.Entry(1, 15));put((int) '%',new Parser.Entry(1, 15));put(Tag.EQ,new Parser.Entry(1, 15));put(Tag.RSHIFT,new Parser.Entry(1, 15));put((int) '^',new Parser.Entry(1, 15));put((int) '>',new Parser.Entry(1, 15));put((int) ']',new Parser.Entry(1, 15));put((int) '<',new Parser.Entry(1, 15));put((int) '|',new Parser.Entry(1, 15));put(Tag.LSHIFT,new Parser.Entry(1, 15));put(Tag.NE,new Parser.Entry(1, 15));put(Tag.AND,new Parser.Entry(1, 15));put(Tag.LE,new Parser.Entry(1, 15));put(Tag.GE,new Parser.Entry(1, 15));put((int) '/',new Parser.Entry(1, 15)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 63));put((int) '+',new Parser.Entry(1, 63));put(Tag.OR,new Parser.Entry(1, 63));put((int) '*',new Parser.Entry(1, 63));put((int) ')',new Parser.Entry(1, 63));put((int) '&',new Parser.Entry(1, 63));put((int) '%',new Parser.Entry(1, 63));put(Tag.EQ,new Parser.Entry(1, 63));put((int) '^',new Parser.Entry(1, 63));put((int) '>',new Parser.Entry(1, 63));put(Tag.RSHIFT,new Parser.Entry(1, 63));put((int) '<',new Parser.Entry(1, 63));put((int) '|',new Parser.Entry(1, 63));put(Tag.LSHIFT,new Parser.Entry(1, 63));put(Tag.NE,new Parser.Entry(1, 63));put(Tag.AND,new Parser.Entry(1, 63));put(Tag.LE,new Parser.Entry(1, 63));put(Tag.GE,new Parser.Entry(1, 63));put((int) '/',new Parser.Entry(1, 63)); }} );
@@ -1770,44 +3734,202 @@ public class Parser {
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 38));put((int) ',',new Parser.Entry(1, 38));put((int) '+',new Parser.Entry(1, 38));put(Tag.OR,new Parser.Entry(1, 38));put((int) '*',new Parser.Entry(1, 38));put((int) ')',new Parser.Entry(1, 38));put((int) '&',new Parser.Entry(1, 38));put((int) '%',new Parser.Entry(1, 38));put(Tag.EQ,new Parser.Entry(1, 38));put((int) '^',new Parser.Entry(1, 38));put((int) '>',new Parser.Entry(1, 38));put(Tag.RSHIFT,new Parser.Entry(1, 38));put((int) '|',new Parser.Entry(1, 38));put((int) '<',new Parser.Entry(1, 38));put(Tag.LSHIFT,new Parser.Entry(1, 38));put(Tag.NE,new Parser.Entry(1, 38));put(Tag.AND,new Parser.Entry(1, 38));put(Tag.LE,new Parser.Entry(1, 38));put(Tag.GE,new Parser.Entry(1, 38));put((int) '/',new Parser.Entry(1, 38)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ']',new Parser.Entry(0, 165)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ')',new Parser.Entry(0, 221)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put((int) '-',new Parser.Entry(0, 75));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 41));put((int) '+',new Parser.Entry(0, 400));put(Tag.OR,new Parser.Entry(0, 287));put((int) '*',new Parser.Entry(0, 352));put((int) '&',new Parser.Entry(0, 126));put((int) '%',new Parser.Entry(0, 144));put(Tag.EQ,new Parser.Entry(0, 365));put(Tag.RSHIFT,new Parser.Entry(0, 153));put((int) '>',new Parser.Entry(0, 288));put((int) '^',new Parser.Entry(0, 293));put((int) ']',new Parser.Entry(0, 16));put((int) '|',new Parser.Entry(0, 42));put((int) '<',new Parser.Entry(0, 182));put(Tag.LSHIFT,new Parser.Entry(0, 154));put(Tag.NE,new Parser.Entry(0, 78));put(Tag.AND,new Parser.Entry(0, 197));put(Tag.LE,new Parser.Entry(0, 275));put(Tag.GE,new Parser.Entry(0, 282));put((int) '/',new Parser.Entry(0, 309)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '-', new Parser.Entry(0, 75));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 41));
+            put(Tag.OR, new Parser.Entry(0, 287));
+            put((int) '+', new Parser.Entry(0, 400));
+            put((int) '*', new Parser.Entry(0, 352));
+            put((int) '&', new Parser.Entry(0, 126));
+            put((int) '%', new Parser.Entry(0, 144));
+            put(Tag.EQ, new Parser.Entry(0, 365));
+            put((int) '>', new Parser.Entry(0, 288));
+            put((int) '^', new Parser.Entry(0, 293));
+            put(Tag.RSHIFT, new Parser.Entry(0, 153));
+            put((int) ']', new Parser.Entry(0, 16));
+            put((int) '<', new Parser.Entry(0, 181));
+            put((int) '|', new Parser.Entry(0, 42));
+            put(Tag.LSHIFT, new Parser.Entry(0, 154));
+            put(Tag.AND, new Parser.Entry(0, 197));
+            put(Tag.NE, new Parser.Entry(0, 78));
+            put(Tag.LE, new Parser.Entry(0, 275));
+            put(Tag.GE, new Parser.Entry(0, 282));
+            put((int) '/', new Parser.Entry(0, 309));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 49));put(Tag.OR,new Parser.Entry(1, 49));put((int) '+',new Parser.Entry(1, 49));put((int) '*',new Parser.Entry(1, 49));put((int) '&',new Parser.Entry(1, 49));put((int) '%',new Parser.Entry(1, 49));put(Tag.EQ,new Parser.Entry(1, 49));put((int) '>',new Parser.Entry(1, 49));put(Tag.RSHIFT,new Parser.Entry(1, 49));put((int) '^',new Parser.Entry(1, 49));put((int) '=',new Parser.Entry(1, 49));put((int) '|',new Parser.Entry(1, 49));put((int) '<',new Parser.Entry(1, 49));put(Tag.LSHIFT,new Parser.Entry(1, 49));put(Tag.AND,new Parser.Entry(1, 49));put(Tag.NE,new Parser.Entry(1, 49));put(Tag.LE,new Parser.Entry(1, 49));put(Tag.GE,new Parser.Entry(1, 49));put((int) '/',new Parser.Entry(1, 49)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 21));put(Tag.OR,new Parser.Entry(1, 21));put((int) '+',new Parser.Entry(1, 21));put((int) '*',new Parser.Entry(1, 21));put((int) '&',new Parser.Entry(1, 21));put((int) '%',new Parser.Entry(1, 21));put(Tag.EQ,new Parser.Entry(1, 21));put((int) '^',new Parser.Entry(1, 21));put((int) '>',new Parser.Entry(1, 21));put(Tag.RSHIFT,new Parser.Entry(1, 21));put((int) '=',new Parser.Entry(1, 21));put((int) '|',new Parser.Entry(1, 21));put((int) '<',new Parser.Entry(1, 21));put(Tag.LSHIFT,new Parser.Entry(1, 21));put(Tag.AND,new Parser.Entry(1, 21));put(Tag.NE,new Parser.Entry(1, 21));put(Tag.LE,new Parser.Entry(1, 21));put(Tag.GE,new Parser.Entry(1, 21));put((int) '/',new Parser.Entry(1, 21)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 223));put(Tag.DECNUM,new Parser.Entry(0, 100));put((int) '-',new Parser.Entry(0, 75));put((int) '+',new Parser.Entry(0, 166));put(Tag.IDENT,new Parser.Entry(0, 302));put((int) '(',new Parser.Entry(0, 47));put(Tag.HEXNUM,new Parser.Entry(0, 324));put((int) '$',new Parser.Entry(0, 405));put((int) '!',new Parser.Entry(0, 240)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 223));
+            put((int) '-', new Parser.Entry(0, 75));
+            put(Tag.DECNUM, new Parser.Entry(0, 100));
+            put((int) '+', new Parser.Entry(0, 166));
+            put(Tag.IDENT, new Parser.Entry(0, 302));
+            put((int) '(', new Parser.Entry(0, 47));
+            put(Tag.HEXNUM, new Parser.Entry(0, 324));
+            put((int) '$', new Parser.Entry(0, 405));
+            put((int) '!', new Parser.Entry(0, 240));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 15));put((int) '+',new Parser.Entry(1, 15));put(Tag.OR,new Parser.Entry(1, 15));put((int) '*',new Parser.Entry(1, 15));put((int) ')',new Parser.Entry(1, 15));put((int) '&',new Parser.Entry(1, 15));put((int) '%',new Parser.Entry(1, 15));put(Tag.EQ,new Parser.Entry(1, 15));put(Tag.RSHIFT,new Parser.Entry(1, 15));put((int) '^',new Parser.Entry(1, 15));put((int) '>',new Parser.Entry(1, 15));put((int) '<',new Parser.Entry(1, 15));put((int) '|',new Parser.Entry(1, 15));put(Tag.LSHIFT,new Parser.Entry(1, 15));put(Tag.NE,new Parser.Entry(1, 15));put(Tag.AND,new Parser.Entry(1, 15));put(Tag.LE,new Parser.Entry(1, 15));put(Tag.GE,new Parser.Entry(1, 15));put((int) '/',new Parser.Entry(1, 15)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 62));put(Tag.RETURN,new Parser.Entry(1, 62));put((int) '{',new Parser.Entry(1, 62));put(Tag.IDENT,new Parser.Entry(1, 62));put(Tag.BREAK,new Parser.Entry(1, 62));put(Tag.WHILE,new Parser.Entry(1, 62));put((int) '$',new Parser.Entry(1, 62));put(Tag.VOID,new Parser.Entry(1, 62));put(Tag.IF,new Parser.Entry(1, 62));put(Tag.INT,new Parser.Entry(1, 62)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 46));put(Tag.RETURN,new Parser.Entry(1, 46));put((int) '}',new Parser.Entry(1, 46));put((int) '{',new Parser.Entry(1, 46));put(Tag.IDENT,new Parser.Entry(1, 46));put(Tag.BREAK,new Parser.Entry(1, 46));put((int) '$',new Parser.Entry(1, 46));put(Tag.WHILE,new Parser.Entry(1, 46));put(Tag.IF,new Parser.Entry(1, 46)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 16));put(Tag.RETURN,new Parser.Entry(1, 16));put((int) '}',new Parser.Entry(1, 16));put((int) '{',new Parser.Entry(1, 16));put(Tag.IDENT,new Parser.Entry(1, 16));put(Tag.BREAK,new Parser.Entry(1, 16));put(Tag.ELSE,new Parser.Entry(1, 16));put((int) '$',new Parser.Entry(1, 16));put(Tag.WHILE,new Parser.Entry(1, 16));put(Tag.IF,new Parser.Entry(1, 16)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 16));put(Tag.RETURN,new Parser.Entry(1, 16));put((int) '}',new Parser.Entry(1, 16));put((int) '{',new Parser.Entry(1, 16));put(Tag.IDENT,new Parser.Entry(1, 16));put(Tag.BREAK,new Parser.Entry(1, 16));put(Tag.ELSE,new Parser.Entry(0, 244));put((int) '$',new Parser.Entry(1, 16));put(Tag.WHILE,new Parser.Entry(1, 16));put(Tag.IF,new Parser.Entry(1, 16)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put(Tag.CONTINUE, new Parser.Entry(1, 16));
+            put(Tag.RETURN, new Parser.Entry(1, 16));
+            put((int) '}', new Parser.Entry(1, 16));
+            put((int) '{', new Parser.Entry(1, 16));
+            put(Tag.IDENT, new Parser.Entry(1, 16));
+            put(Tag.BREAK, new Parser.Entry(1, 16));
+            put(Tag.ELSE, new Parser.Entry(0, 244));
+            put((int) '$', new Parser.Entry(1, 16));
+            put(Tag.WHILE, new Parser.Entry(1, 16));
+            put(Tag.IF, new Parser.Entry(1, 16));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 35));put(Tag.OR,new Parser.Entry(1, 35));put((int) '+',new Parser.Entry(1, 35));put((int) '*',new Parser.Entry(1, 35));put((int) '&',new Parser.Entry(1, 35));put((int) '%',new Parser.Entry(1, 35));put(Tag.EQ,new Parser.Entry(1, 35));put(Tag.RSHIFT,new Parser.Entry(1, 35));put((int) '>',new Parser.Entry(1, 35));put((int) '^',new Parser.Entry(1, 35));put((int) '=',new Parser.Entry(1, 35));put((int) '|',new Parser.Entry(1, 35));put((int) '<',new Parser.Entry(1, 35));put(Tag.LSHIFT,new Parser.Entry(1, 35));put(Tag.NE,new Parser.Entry(1, 35));put(Tag.AND,new Parser.Entry(1, 35));put(Tag.LE,new Parser.Entry(1, 35));put(Tag.GE,new Parser.Entry(1, 35));put((int) '/',new Parser.Entry(1, 35)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 183));
+            put(Tag.DECNUM, new Parser.Entry(0, 331));
+            put((int) '-', new Parser.Entry(0, 89));
+            put((int) '+', new Parser.Entry(0, 184));
+            put(Tag.IDENT, new Parser.Entry(0, 268));
+            put((int) '(', new Parser.Entry(0, 152));
+            put(Tag.HEXNUM, new Parser.Entry(0, 127));
+            put((int) '$', new Parser.Entry(0, 385));
+            put((int) '!', new Parser.Entry(0, 263));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ']',new Parser.Entry(0, 378)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 183));put((int) '-',new Parser.Entry(0, 89));put(Tag.DECNUM,new Parser.Entry(0, 331));put((int) '+',new Parser.Entry(0, 184));put(Tag.IDENT,new Parser.Entry(0, 268));put((int) '(',new Parser.Entry(0, 152));put(Tag.HEXNUM,new Parser.Entry(0, 127));put((int) '$',new Parser.Entry(0, 385));put((int) '!',new Parser.Entry(0, 263)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 115));put(Tag.DECNUM,new Parser.Entry(0, 85));put((int) '-',new Parser.Entry(0, 158));put((int) '+',new Parser.Entry(0, 237));put(Tag.IDENT,new Parser.Entry(0, 437));put((int) '(',new Parser.Entry(0, 363));put(Tag.HEXNUM,new Parser.Entry(0, 347));put((int) '$',new Parser.Entry(0, 95));put((int) '!',new Parser.Entry(0, 217)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '~', new Parser.Entry(0, 115));
+            put((int) '-', new Parser.Entry(0, 158));
+            put(Tag.DECNUM, new Parser.Entry(0, 85));
+            put((int) '+', new Parser.Entry(0, 238));
+            put(Tag.IDENT, new Parser.Entry(0, 437));
+            put((int) '(', new Parser.Entry(0, 363));
+            put(Tag.HEXNUM, new Parser.Entry(0, 347));
+            put((int) '$', new Parser.Entry(0, 95));
+            put((int) '!', new Parser.Entry(0, 217));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 21));put(Tag.OR,new Parser.Entry(1, 21));put((int) '+',new Parser.Entry(1, 21));put((int) '*',new Parser.Entry(1, 21));put((int) '&',new Parser.Entry(1, 21));put((int) '%',new Parser.Entry(1, 21));put(Tag.EQ,new Parser.Entry(1, 21));put((int) '^',new Parser.Entry(1, 21));put((int) '>',new Parser.Entry(1, 21));put(Tag.RSHIFT,new Parser.Entry(1, 21));put((int) ']',new Parser.Entry(1, 21));put((int) '|',new Parser.Entry(1, 21));put((int) '<',new Parser.Entry(1, 21));put(Tag.LSHIFT,new Parser.Entry(1, 21));put(Tag.AND,new Parser.Entry(1, 21));put(Tag.NE,new Parser.Entry(1, 21));put(Tag.LE,new Parser.Entry(1, 21));put(Tag.GE,new Parser.Entry(1, 21));put((int) '/',new Parser.Entry(1, 21)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 10));put((int) '}',new Parser.Entry(1, 10));put(Tag.RETURN,new Parser.Entry(1, 10));put((int) '{',new Parser.Entry(1, 10));put(Tag.IDENT,new Parser.Entry(1, 10));put(Tag.BREAK,new Parser.Entry(1, 10));put(Tag.ELSE,new Parser.Entry(1, 10));put(Tag.WHILE,new Parser.Entry(1, 10));put((int) '$',new Parser.Entry(1, 10));put(Tag.IF,new Parser.Entry(1, 10)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 21));put(Tag.OR,new Parser.Entry(1, 21));put((int) '+',new Parser.Entry(1, 21));put((int) '*',new Parser.Entry(1, 21));put((int) '&',new Parser.Entry(1, 21));put((int) '%',new Parser.Entry(1, 21));put(Tag.EQ,new Parser.Entry(1, 21));put((int) '^',new Parser.Entry(1, 21));put((int) '>',new Parser.Entry(1, 21));put(Tag.RSHIFT,new Parser.Entry(1, 21));put((int) '|',new Parser.Entry(1, 21));put((int) '<',new Parser.Entry(1, 21));put((int) ';',new Parser.Entry(1, 21));put(Tag.LSHIFT,new Parser.Entry(1, 21));put(Tag.AND,new Parser.Entry(1, 21));put(Tag.NE,new Parser.Entry(1, 21));put(Tag.LE,new Parser.Entry(1, 21));put(Tag.GE,new Parser.Entry(1, 21));put((int) '/',new Parser.Entry(1, 21)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 53));put((int) '}',new Parser.Entry(1, 53));put(Tag.RETURN,new Parser.Entry(1, 53));put((int) '{',new Parser.Entry(1, 53));put(Tag.IDENT,new Parser.Entry(1, 53));put(Tag.BREAK,new Parser.Entry(1, 53));put((int) '$',new Parser.Entry(1, 53));put(Tag.WHILE,new Parser.Entry(1, 53));put(Tag.IF,new Parser.Entry(1, 53)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 34));put(Tag.RETURN,new Parser.Entry(1, 34));put((int) '}',new Parser.Entry(1, 34));put((int) '{',new Parser.Entry(1, 34));put(Tag.IDENT,new Parser.Entry(1, 34));put(Tag.BREAK,new Parser.Entry(1, 34));put(Tag.WHILE,new Parser.Entry(1, 34));put((int) '$',new Parser.Entry(1, 34));put(Tag.IF,new Parser.Entry(1, 34)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 52));put((int) '+',new Parser.Entry(1, 52));put(Tag.OR,new Parser.Entry(1, 52));put((int) '*',new Parser.Entry(1, 52));put((int) ')',new Parser.Entry(1, 52));put((int) '&',new Parser.Entry(1, 52));put((int) '%',new Parser.Entry(1, 52));put(Tag.EQ,new Parser.Entry(1, 52));put((int) '^',new Parser.Entry(1, 52));put((int) '>',new Parser.Entry(1, 52));put(Tag.RSHIFT,new Parser.Entry(1, 52));put((int) '<',new Parser.Entry(1, 52));put((int) '|',new Parser.Entry(1, 52));put(Tag.LSHIFT,new Parser.Entry(1, 52));put(Tag.NE,new Parser.Entry(1, 52));put(Tag.AND,new Parser.Entry(1, 52));put(Tag.LE,new Parser.Entry(1, 52));put(Tag.GE,new Parser.Entry(1, 52));put((int) '/',new Parser.Entry(1, 52)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ';',new Parser.Entry(0, 289));put((int) '[',new Parser.Entry(0, 358));put((int) '(',new Parser.Entry(1, 70)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put(Tag.CONTINUE, new Parser.Entry(1, 34));
+            put(Tag.RETURN, new Parser.Entry(1, 34));
+            put((int) '}', new Parser.Entry(1, 34));
+            put((int) '{', new Parser.Entry(1, 34));
+            put(Tag.IDENT, new Parser.Entry(1, 34));
+            put(Tag.BREAK, new Parser.Entry(1, 34));
+            put(Tag.WHILE, new Parser.Entry(1, 34));
+            put((int) '$', new Parser.Entry(1, 34));
+            put(Tag.IF, new Parser.Entry(1, 34));
+        }});
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '[', new Parser.Entry(0, 358));
+            put((int) ';', new Parser.Entry(0, 289));
+            put((int) '(', new Parser.Entry(1, 70));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 48));put((int) '+',new Parser.Entry(1, 48));put(Tag.OR,new Parser.Entry(1, 48));put((int) '*',new Parser.Entry(1, 48));put((int) '&',new Parser.Entry(1, 48));put((int) '%',new Parser.Entry(1, 48));put(Tag.EQ,new Parser.Entry(1, 48));put((int) '>',new Parser.Entry(1, 48));put((int) '^',new Parser.Entry(1, 48));put(Tag.RSHIFT,new Parser.Entry(1, 48));put((int) '=',new Parser.Entry(1, 48));put((int) '|',new Parser.Entry(1, 48));put((int) '<',new Parser.Entry(1, 48));put(Tag.LSHIFT,new Parser.Entry(1, 48));put(Tag.NE,new Parser.Entry(1, 48));put(Tag.AND,new Parser.Entry(1, 48));put(Tag.LE,new Parser.Entry(1, 48));put(Tag.GE,new Parser.Entry(1, 48));put((int) '/',new Parser.Entry(1, 48)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 10));put((int) '}',new Parser.Entry(1, 10));put(Tag.RETURN,new Parser.Entry(1, 10));put((int) '{',new Parser.Entry(1, 10));put(Tag.IDENT,new Parser.Entry(1, 10));put(Tag.BREAK,new Parser.Entry(1, 10));put(Tag.WHILE,new Parser.Entry(1, 10));put((int) '$',new Parser.Entry(1, 10));put(Tag.IF,new Parser.Entry(1, 10)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(Tag.CONTINUE,new Parser.Entry(1, 56));put((int) '}',new Parser.Entry(1, 56));put(Tag.RETURN,new Parser.Entry(1, 56));put((int) '{',new Parser.Entry(1, 56));put(Tag.IDENT,new Parser.Entry(1, 56));put(Tag.BREAK,new Parser.Entry(1, 56));put(Tag.ELSE,new Parser.Entry(1, 56));put(Tag.WHILE,new Parser.Entry(1, 56));put((int) '$',new Parser.Entry(1, 56));put(Tag.IF,new Parser.Entry(1, 56)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 91));put((int) '+',new Parser.Entry(0, 239));put((int) ')',new Parser.Entry(1, 4));put((int) '(',new Parser.Entry(0, 251));put((int) '$',new Parser.Entry(0, 156));put((int) '!',new Parser.Entry(0, 88));put((int) '~',new Parser.Entry(0, 388));put(Tag.DECNUM,new Parser.Entry(0, 371));put(Tag.IDENT,new Parser.Entry(0, 238));put(Tag.HEXNUM,new Parser.Entry(0, 82)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 91));
+            put((int) '+', new Parser.Entry(0, 239));
+            put((int) ')', new Parser.Entry(1, 4));
+            put((int) '(', new Parser.Entry(0, 251));
+            put((int) '$', new Parser.Entry(0, 156));
+            put((int) '!', new Parser.Entry(0, 88));
+            put((int) '~', new Parser.Entry(0, 388));
+            put(Tag.DECNUM, new Parser.Entry(0, 371));
+            put(Tag.IDENT, new Parser.Entry(0, 237));
+            put(Tag.HEXNUM, new Parser.Entry(0, 82));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 18));put(Tag.VOID,new Parser.Entry(1, 18));put(Tag.INT,new Parser.Entry(1, 18)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) ',',new Parser.Entry(0, 327));put((int) ')',new Parser.Entry(1, 37)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(0, 51));put(Tag.OR,new Parser.Entry(0, 157));put((int) '+',new Parser.Entry(0, 414));put((int) '*',new Parser.Entry(0, 389));put((int) '&',new Parser.Entry(0, 205));put((int) '%',new Parser.Entry(0, 159));put(Tag.EQ,new Parser.Entry(0, 354));put((int) '^',new Parser.Entry(0, 307));put((int) '>',new Parser.Entry(0, 336));put(Tag.RSHIFT,new Parser.Entry(0, 175));put((int) '=',new Parser.Entry(0, 210));put((int) '<',new Parser.Entry(0, 194));put((int) '|',new Parser.Entry(0, 31));put(Tag.LSHIFT,new Parser.Entry(0, 49));put(Tag.AND,new Parser.Entry(0, 207));put(Tag.NE,new Parser.Entry(0, 59));put(Tag.LE,new Parser.Entry(0, 286));put(Tag.GE,new Parser.Entry(0, 248));put((int) '/',new Parser.Entry(0, 295)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(0, 51));
+            put((int) '+', new Parser.Entry(0, 413));
+            put(Tag.OR, new Parser.Entry(0, 157));
+            put((int) '*', new Parser.Entry(0, 389));
+            put((int) '&', new Parser.Entry(0, 205));
+            put((int) '%', new Parser.Entry(0, 159));
+            put(Tag.EQ, new Parser.Entry(0, 354));
+            put(Tag.RSHIFT, new Parser.Entry(0, 175));
+            put((int) '>', new Parser.Entry(0, 336));
+            put((int) '^', new Parser.Entry(0, 306));
+            put((int) '=', new Parser.Entry(0, 211));
+            put((int) '<', new Parser.Entry(0, 194));
+            put((int) '|', new Parser.Entry(0, 31));
+            put(Tag.LSHIFT, new Parser.Entry(0, 49));
+            put(Tag.NE, new Parser.Entry(0, 59));
+            put(Tag.AND, new Parser.Entry(0, 207));
+            put(Tag.LE, new Parser.Entry(0, 286));
+            put(Tag.GE, new Parser.Entry(0, 247));
+            put((int) '/', new Parser.Entry(0, 295));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 77));put((int) ',',new Parser.Entry(1, 77));put(Tag.OR,new Parser.Entry(1, 77));put((int) '+',new Parser.Entry(1, 77));put((int) '*',new Parser.Entry(1, 77));put((int) ')',new Parser.Entry(1, 77));put((int) '&',new Parser.Entry(1, 77));put((int) '%',new Parser.Entry(1, 77));put(Tag.EQ,new Parser.Entry(1, 77));put((int) '^',new Parser.Entry(1, 77));put((int) '>',new Parser.Entry(1, 77));put(Tag.RSHIFT,new Parser.Entry(1, 77));put((int) '<',new Parser.Entry(1, 77));put((int) '|',new Parser.Entry(1, 77));put(Tag.LSHIFT,new Parser.Entry(1, 77));put(Tag.AND,new Parser.Entry(1, 77));put(Tag.NE,new Parser.Entry(1, 77));put(Tag.LE,new Parser.Entry(1, 77));put(Tag.GE,new Parser.Entry(1, 77));put((int) '/',new Parser.Entry(1, 77)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 33));put((int) '+',new Parser.Entry(1, 33));put(Tag.OR,new Parser.Entry(1, 33));put((int) '*',new Parser.Entry(1, 33));put((int) '&',new Parser.Entry(1, 33));put((int) '%',new Parser.Entry(1, 33));put(Tag.EQ,new Parser.Entry(1, 33));put(Tag.RSHIFT,new Parser.Entry(1, 33));put((int) '^',new Parser.Entry(1, 33));put((int) '>',new Parser.Entry(1, 33));put((int) '=',new Parser.Entry(1, 33));put((int) '|',new Parser.Entry(1, 33));put((int) '<',new Parser.Entry(1, 33));put(Tag.LSHIFT,new Parser.Entry(1, 33));put(Tag.AND,new Parser.Entry(1, 33));put(Tag.NE,new Parser.Entry(1, 33));put(Tag.LE,new Parser.Entry(1, 33));put(Tag.GE,new Parser.Entry(1, 33));put((int) '/',new Parser.Entry(1, 33)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put(-1,new Parser.Entry(1, 27));put(Tag.VOID,new Parser.Entry(1, 27));put(Tag.INT,new Parser.Entry(1, 27)); }} );
-        parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 30));put(Tag.OR,new Parser.Entry(1, 30));put((int) '+',new Parser.Entry(1, 30));put((int) '*',new Parser.Entry(1, 30));put((int) ')',new Parser.Entry(1, 30));put((int) '(',new Parser.Entry(0, 369));put((int) '&',new Parser.Entry(1, 30));put((int) '%',new Parser.Entry(1, 30));put(Tag.EQ,new Parser.Entry(1, 30));put((int) '^',new Parser.Entry(1, 30));put(Tag.RSHIFT,new Parser.Entry(1, 30));put((int) '>',new Parser.Entry(1, 30));put((int) '<',new Parser.Entry(1, 30));put((int) '|',new Parser.Entry(1, 30));put((int) '[',new Parser.Entry(0, 81));put(Tag.LSHIFT,new Parser.Entry(1, 30));put(Tag.NE,new Parser.Entry(1, 30));put(Tag.AND,new Parser.Entry(1, 30));put(Tag.LE,new Parser.Entry(1, 30));put(Tag.GE,new Parser.Entry(1, 30));put((int) '/',new Parser.Entry(1, 30)); }} );
+        parsingTable.add(new HashMap<Integer, Entry>() {{
+            put((int) '-', new Parser.Entry(1, 31));
+            put(Tag.OR, new Parser.Entry(1, 31));
+            put((int) '+', new Parser.Entry(1, 31));
+            put((int) '*', new Parser.Entry(1, 31));
+            put((int) ')', new Parser.Entry(1, 31));
+            put((int) '(', new Parser.Entry(0, 369));
+            put((int) '&', new Parser.Entry(1, 31));
+            put((int) '%', new Parser.Entry(1, 31));
+            put(Tag.EQ, new Parser.Entry(1, 31));
+            put((int) '^', new Parser.Entry(1, 31));
+            put(Tag.RSHIFT, new Parser.Entry(1, 31));
+            put((int) '>', new Parser.Entry(1, 31));
+            put((int) '<', new Parser.Entry(1, 31));
+            put((int) '|', new Parser.Entry(1, 31));
+            put((int) '[', new Parser.Entry(0, 81));
+            put(Tag.LSHIFT, new Parser.Entry(1, 31));
+            put(Tag.NE, new Parser.Entry(1, 31));
+            put(Tag.AND, new Parser.Entry(1, 31));
+            put(Tag.LE, new Parser.Entry(1, 31));
+            put(Tag.GE, new Parser.Entry(1, 31));
+            put((int) '/', new Parser.Entry(1, 31));
+        }});
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '-',new Parser.Entry(1, 19));put((int) '+',new Parser.Entry(1, 19));put(Tag.OR,new Parser.Entry(1, 19));put((int) '*',new Parser.Entry(1, 19));put((int) '&',new Parser.Entry(1, 19));put((int) '%',new Parser.Entry(1, 19));put(Tag.EQ,new Parser.Entry(1, 19));put(Tag.RSHIFT,new Parser.Entry(1, 19));put((int) '^',new Parser.Entry(1, 19));put((int) '>',new Parser.Entry(1, 19));put((int) '=',new Parser.Entry(1, 19));put((int) '|',new Parser.Entry(1, 19));put((int) '<',new Parser.Entry(1, 19));put(Tag.LSHIFT,new Parser.Entry(1, 19));put(Tag.NE,new Parser.Entry(1, 19));put(Tag.AND,new Parser.Entry(1, 19));put(Tag.LE,new Parser.Entry(1, 19));put(Tag.GE,new Parser.Entry(1, 19));put((int) '/',new Parser.Entry(1, 19)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '$',new Parser.Entry(0, 321));put(Tag.CONTINUE,new Parser.Entry(0, 257));put((int) '}',new Parser.Entry(0, 147));put(Tag.RETURN,new Parser.Entry(0, 356));put((int) '{',new Parser.Entry(0, 285));put(Tag.IDENT,new Parser.Entry(0, 311));put(Tag.BREAK,new Parser.Entry(0, 138));put(Tag.WHILE,new Parser.Entry(0, 86));put(Tag.IF,new Parser.Entry(0, 383)); }} );
         parsingTable.add(new HashMap<Integer, Entry>(){{ put((int) '~',new Parser.Entry(0, 7));put((int) '-',new Parser.Entry(0, 32));put(Tag.DECNUM,new Parser.Entry(0, 118));put((int) '+',new Parser.Entry(0, 104));put(Tag.IDENT,new Parser.Entry(0, 350));put((int) '(',new Parser.Entry(0, 57));put(Tag.HEXNUM,new Parser.Entry(0, 339));put((int) '$',new Parser.Entry(0, 440));put((int) '!',new Parser.Entry(0, 253)); }} );
@@ -1831,9 +3953,12 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 359 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 335);
+            put(13, 232);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 191 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 232 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 366 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -1849,11 +3974,17 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 66 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 122 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 335);
+            put(13, 121);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 342 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 65 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 171 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 241);
+            put(13, 170);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -1945,14 +4076,28 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 94 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 306 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 69);
+            put(13, 307);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 177 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 220 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(0, 37);
+            put(7, 224);
+            put(8, 48);
+            put(23, 12);
+            put(15, 25);
+            put(17, 414);
+            put(4, 171);
+            put(25, 322);
+            put(6, 242);
+            put(27, 429);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 125 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 0, 37 );put( 7, 224 );put( 8, 48 );put( 23, 11 );put( 15, 24 );put( 17, 413 );put( 4, 170 );put( 25, 322 );put( 6, 242 );put( 27, 429 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -1981,7 +4126,18 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 427 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 393 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 415 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 0, 37 );put( 7, 224 );put( 8, 48 );put( 23, 11 );put( 15, 24 );put( 17, 349 );put( 4, 170 );put( 25, 322 );put( 6, 242 );put( 27, 429 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(0, 37);
+            put(7, 224);
+            put(8, 48);
+            put(23, 12);
+            put(15, 25);
+            put(17, 349);
+            put(4, 171);
+            put(25, 322);
+            put(6, 242);
+            put(27, 429);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 19, 163 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 14, 109 );put( 11, 256 );put( 26, 439 ); }} );
@@ -1994,7 +4150,12 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 2, 432 );put( 10, 13 );put( 18, 374 );put( 13, 377 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(2, 432);
+            put(10, 13);
+            put(18, 375);
+            put(13, 377);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 435 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2002,10 +4163,16 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 340);
+            put(13, 122);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 310 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 121 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 294 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 25 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 335);
+            put(13, 24);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 63 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2031,8 +4198,11 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 438 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 189 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 335);
+            put(13, 189);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2046,10 +4216,23 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 139 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 0, 80 );put( 7, 134 );put( 8, 228 );put( 23, 148 );put( 15, 54 );put( 17, 164 );put( 4, 117 );put( 25, 140 );put( 6, 441 );put( 27, 119 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 105 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 26, 225 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(0, 80);
+            put(7, 134);
+            put(8, 228);
+            put(23, 148);
+            put(15, 54);
+            put(17, 164);
+            put(4, 117);
+            put(25, 140);
+            put(6, 441);
+            put(27, 119);
+        }});
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(26, 227);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 330 ); }} );
@@ -2058,8 +4241,11 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 15 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 316 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 69);
+            put(13, 316);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 364 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 299 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2068,13 +4254,17 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 0, 80 );put( 7, 134 );put( 8, 228 );put( 23, 148 );put( 15, 54 );put( 17, 259 );put( 4, 117 );put( 25, 140 );put( 6, 441 );put( 27, 119 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 129 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 361 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 328 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 345 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 241);
+            put(13, 346);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 155 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2097,18 +4287,38 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 337 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 227 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 13);
+            put(13, 226);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 4 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 0, 37 );put( 7, 224 );put( 8, 48 );put( 23, 11 );put( 15, 24 );put( 17, 412 );put( 4, 170 );put( 25, 322 );put( 6, 242 );put( 27, 429 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(0, 37);
+            put(7, 224);
+            put(8, 48);
+            put(23, 12);
+            put(15, 25);
+            put(17, 412);
+            put(4, 171);
+            put(25, 322);
+            put(6, 242);
+            put(27, 429);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 319 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 340);
+            put(13, 318);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 212 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 145 ); }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 214 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 340);
+            put(13, 213);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 269 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2126,25 +4336,46 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 325 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+        }});
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 241);
+            put(13, 296);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 296 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 340);
+            put(13, 214);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 213 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 69);
+            put(13, 210);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 211 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 444 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 433 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 0, 37 );put( 7, 224 );put( 8, 48 );put( 23, 11 );put( 15, 24 );put( 17, 137 );put( 4, 170 );put( 25, 322 );put( 6, 242 );put( 27, 429 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(0, 37);
+            put(7, 224);
+            put(8, 48);
+            put(23, 12);
+            put(15, 25);
+            put(17, 137);
+            put(4, 171);
+            put(25, 322);
+            put(6, 242);
+            put(27, 429);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 8 ); }} );
@@ -2153,7 +4384,10 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 249 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 69);
+            put(13, 248);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 13 );put( 13, 43 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 222 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2195,8 +4429,11 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 120 ); }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 340);
+            put(13, 308);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 340 );put( 13, 308 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2234,8 +4471,11 @@ public class Parser {
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 69 );put( 13, 261 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
+        gotoTable.add(new HashMap<Integer, Integer>() {{
+            put(10, 241);
+            put(13, 229);
+        }});
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
-        gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 241 );put( 13, 229 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{ put( 10, 335 );put( 13, 301 ); }} );
         gotoTable.add(new HashMap<Integer, Integer>(){{  }} );
@@ -2314,8 +4554,17 @@ public class Parser {
         }
     }
 
+    int checkExpr(Symbol arg1, Symbol arg2, int op) {
+        int i = arg1.matchType(arg1, op);
+        if (i == -1)
+            yyerror("类型不匹配: 需要一个" + arg1.getTypeSpec() + "类型的变量，却得到一个" + arg2.getTypeSpec() + "类型的变量");
+        if (i == -2)
+            yyerror("类型不匹配: " + arg1.getTypeSpec() + "类型的变量与" + arg2.getTypeSpec() + "类型的变量不能应用于该算符");
+        return i;
+    }
+
     Boolean checkType(Symbol required, Symbol given) {
-        Boolean b = required.checkType(given);
+        Boolean b = required.matchType(given);
         if(!b)
             yyerror("类型不匹配: 需要一个" + required.getTypeSpec() + "类型的变量，却得到一个" + given.getTypeSpec() + "类型的变量");
         return b;
