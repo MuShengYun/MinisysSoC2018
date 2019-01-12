@@ -1,7 +1,5 @@
 package com.seu.MiniCCompiler.sem;
 
-import com.seu.MiniCCompiler.sem.Symbol;
-
 /**
  * 三地址代码类
  * 用四元式表示
@@ -11,10 +9,10 @@ import com.seu.MiniCCompiler.sem.Symbol;
  * ...
  */
 public class ThreeAddrCode {
-    Integer op;
-    Object arg1;
-    Object arg2;
-    Symbol result;
+    public Integer op;
+    public Object arg1;
+    public Object arg2;
+    public Symbol result;
 
     public ThreeAddrCode(Integer op_, Object arg1_, Object arg2_, Symbol result_) {
         op = op_;

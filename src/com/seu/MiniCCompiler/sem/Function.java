@@ -2,17 +2,16 @@ package com.seu.MiniCCompiler.sem;
 
 import com.seu.MiniCCompiler.Tag;
 
-import java.util.ArrayList;
 import java.util.Vector;
 
 public class Function {
     public String name;
     public int retType;
-    public ArrayList<Symbol> params;
+    public Vector<Symbol> params;
     public SymbolTable symbolTable;
     public Vector<ThreeAddrCode> code;
 
-    Function(String name, int retType, ArrayList<Symbol> params) {
+    public Function(String name, int retType, Vector<Symbol> params) {
         this.name = name;
         this.retType = retType;
         this.params = params;
@@ -21,9 +20,33 @@ public class Function {
     public String getRetTypeSpec() {
         if (retType == Tag.TYPE_INT)
             return "int";
-        if (retType == Tag.TYPE_BOOL)
-            return "bool";
+        if (retType == Tag.TYPE_VOID)
+            return "void";
         return "";
+    }
+
+    /**
+     * 获取局部变量
+     *
+     * @return 局部变量的向量
+     */
+    public Vector<Symbol> getLocals() {
+        Vector<Symbol> locals = new Vector<>();
+        locals.addAll(symbolTable.symbolList);
+        if (symbolTable.tempList.size() > 10)
+            locals.addAll(symbolTable.tempList.subList(10, symbolTable.tempList.size()));
+        return locals;
+    }
+
+    /**
+     * 获取局部临时变量，至多为十个
+     *
+     * @return 局部临时变量的向量
+     */
+    public Vector<Symbol> getTemps() {
+        if (symbolTable.tempList.size() > 10)
+            return (Vector<Symbol>) symbolTable.symbolList.subList(0, 10);
+        else return symbolTable.tempList;
     }
 
     /**

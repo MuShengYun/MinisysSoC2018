@@ -1,5 +1,6 @@
 package com.seu.MiniCCompiler.gen;
 
+import com.seu.MiniCCompiler.sem.FunctionTable;
 import com.seu.MiniCCompiler.sem.Symbol;
 import com.seu.MiniCCompiler.sem.SymbolTable;
 import com.seu.MiniCCompiler.sem.ThreeAddrCode;
@@ -13,7 +14,14 @@ public class CodeGenerator {
 
     Vector<ThreeAddrCode> medCode = new Vector<>();
     public SymbolTable global;
+    public FunctionTable funcs;
 
+
+    public Vector<ThreeAddrCode> reduce() {
+        Vector<ThreeAddrCode> code = medCode;
+        medCode = new Vector<>();
+        return code;
+    }
 
     public void gen(Object... array) {
 

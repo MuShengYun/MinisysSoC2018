@@ -25,4 +25,5 @@ public class Tag {
     //数据类型标签
     public static final int TYPE_INT = 0;
     public static final int TYPE_BOOL = 1;
+    public static final int TYPE_VOID = 2;
 }

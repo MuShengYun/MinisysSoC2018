@@ -24,6 +24,6 @@ class AsmFileTest {
 
     @Test
     fun writeFile() {
-        asmFile.writeFile("temp/main.asm")
+        asmFile.writeFile("target/main.asm")
     }
 }
