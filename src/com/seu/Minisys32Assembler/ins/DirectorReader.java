@@ -119,7 +119,7 @@ public class DirectorReader {
                 }
                 return bytes;
             default:
-                throw new Exception("Data define error - Unknown data type");
+                throw new Exception("Data define error - Unknown data retType");
         }
 
         for (String data : dataSet) {

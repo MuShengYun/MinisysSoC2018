@@ -9,10 +9,11 @@ import java.util.Vector;
 public class SymbolTable {
 
     /*符号表数据 （符号名称，符号类型）*/
-    Vector<Symbol> symbolList = new Vector<>();
+    public Vector<Symbol> symbolList = new Vector<>();
 
     /*环境符号表，作用域包含当前语句的符号表栈*/
-    Stack<SymbolTable> env = new Stack<>();
+    public Stack<SymbolTable> env = new Stack<>();
+
     int tempCount = 0;
 
     public SymbolTable(Stack<SymbolTable> env) {

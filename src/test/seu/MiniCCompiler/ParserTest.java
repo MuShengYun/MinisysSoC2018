@@ -15,7 +15,6 @@ public class ParserTest {
     @Test
     public void syntaxTree() {
         try {
-            int ID;
             Lexer lexer = new Lexer("resource/compilerTest.cpp");
             Parser parser = new Parser(lexer);
             parser.yyparse();
@@ -28,7 +27,6 @@ public class ParserTest {
     @Test
     public void generate() {
         try {
-            int ID;
             Lexer lexer = new Lexer("resource/compilerTest.cpp");
             Parser parser = new Parser(lexer);
             parser.yyparse();

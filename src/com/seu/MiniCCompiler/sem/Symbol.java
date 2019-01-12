@@ -9,7 +9,6 @@ public class Symbol {
     Symbol(String name, int type) {
         this.name = name;
         this.type = type;
-        Boolean b;
     }
 
     /**
@@ -33,7 +32,7 @@ public class Symbol {
         return type;
     }
 
-    public Boolean matchOp(int op) {
+    public boolean matchOp(int op) {
         if (type == Tag.TYPE_INT)
             return isArithmetic(op);
         if (type == Tag.TYPE_BOOL)
@@ -41,7 +40,7 @@ public class Symbol {
         return false;
     }
 
-    Boolean isArithmetic(int op) {
+    boolean isArithmetic(int op) {
         switch (op) {
             case '+':
             case '-':
@@ -61,7 +60,7 @@ public class Symbol {
         }
     }
 
-    Boolean isLogical(int op) {
+    boolean isLogical(int op) {
         switch (op) {
             case Tag.OR:
             case Tag.EQ:
@@ -89,6 +88,6 @@ public class Symbol {
 
     @Override
     public String toString() {
-        return name;
+        return name + ":" + getTypeSpec();
     }
 }
