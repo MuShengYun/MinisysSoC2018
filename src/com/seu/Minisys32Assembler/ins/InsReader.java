@@ -80,8 +80,8 @@ public class InsReader {
         }
         registers.put("$t8", registerCount++);
         registers.put("$t9", registerCount++);
+        registers.put("$k0", registerCount++);
         registers.put("$k1", registerCount++);
-        registers.put("$k2", registerCount++);
         registers.put("$gp", registerCount++);
         registers.put("$sp", registerCount++);
         registers.put("$fp", registerCount);
@@ -234,25 +234,25 @@ public class InsReader {
         //不同进制的数字
         else
             try {
-
-                switch (operand.charAt(length - 1)) {
-                    case 'b':
-                        num = Integer.parseInt(operand.substring(0, length - 1), 2);
-                        break;
-                    case 'h':
-                        num = Integer.parseInt(operand.substring(0, length - 1), 16);
-                        break;
-                    case 'o':
-                        num = Integer.parseInt(operand.substring(0, length - 1), 8);
-                        break;
-                    case 'd':
-                        num = Integer.parseInt(operand.substring(0, length - 1));
-                        break;
-                    default:
-                        if (operand.startsWith("0x"))
-                            num = Integer.parseUnsignedInt(operand.substring(2), 16);
-                        else num = Integer.parseInt(operand);
-                }
+                if (operand.startsWith("0x"))
+                    num = Integer.parseUnsignedInt(operand.substring(2), 16);
+                else
+                    switch (operand.charAt(length - 1)) {
+                        case 'b':
+                            num = Integer.parseInt(operand.substring(0, length - 1), 2);
+                            break;
+                        case 'h':
+                            num = Integer.parseInt(operand.substring(0, length - 1), 16);
+                            break;
+                        case 'o':
+                            num = Integer.parseInt(operand.substring(0, length - 1), 8);
+                            break;
+                        case 'd':
+                            num = Integer.parseInt(operand.substring(0, length - 1));
+                            break;
+                        default:
+                            num = Integer.parseInt(operand);
+                    }
             } catch (NumberFormatException e) {
                 if (operand.matches("[a-zA-Z]"))
                     throw new Exception("Syntax format error - Symbol not defined");
@@ -285,6 +285,9 @@ public class InsReader {
                 break;
             case "address":
                 numOfBits = 26;
+                break;
+            case "code":
+                numOfBits = 20;
                 break;
         }
         String codeWithFilledBits = String.join("", Collections.nCopies(32, signDigit.toString())).concat(code);

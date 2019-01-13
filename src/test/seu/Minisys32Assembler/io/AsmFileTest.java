@@ -9,7 +9,7 @@ public class AsmFileTest {
     @Test
     @Ignore
     public void asmFileTest() throws Exception {
-        AsmFile asmFile = new AsmFile("resource/assemblerTest.asm");
+        AsmFile asmFile = new AsmFile("resource/bios.asm");
         //asmFile.instructionBytes.forEach(System.out::println);
         //asmFile.directorReader.insBytes.forEach(System.out::println);
 
