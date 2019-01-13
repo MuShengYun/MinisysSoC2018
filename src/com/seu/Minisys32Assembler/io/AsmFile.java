@@ -161,11 +161,11 @@ public class AsmFile {
             }
 
             Address currentAddress = insReader.codeAddrDistributor.distributeAddress(4);
-            try {
+            /*try {*/
                 insReader.transform(ins);
-            } catch (Exception e) {
+            /*} catch (Exception e) {
                 throw new Exception("Inner error of instruction:" + e.getMessage());
-            }
+            }*/
 
         }
 

@@ -15,7 +15,7 @@ public class CoeFileTest {
 
     {
         try {
-            asmFile = new AsmFile("resource/bios.asm");
+            asmFile = new AsmFile("resource/cputest.asm");
             coeFile = new CoeFile(asmFile);
         } catch (Exception e) {
             e.printStackTrace();

@@ -3,6 +3,7 @@
   <component name="ProjectPlainTextFileTypeManager">
     <file url="file://$PROJECT_DIR$/resource/assemblerTest.asm" />
     <file url="file://$PROJECT_DIR$/resource/bios.asm" />
+    <file url="file://$PROJECT_DIR$/resource/cputest.asm" />
     <file url="file://$PROJECT_DIR$/target/main.asm" />
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_1_8" project-jdk-name="1.8" project-jdk-type="JavaSDK">

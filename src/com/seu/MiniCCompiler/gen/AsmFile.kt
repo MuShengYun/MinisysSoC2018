@@ -156,6 +156,17 @@ class AsmFile(private var generator: CodeGenerator) {
                     && arg1 is Symbol
                     && arg2 is Int ->
                 "addi ${regDistributor.getReg(result)},${regDistributor.getReg(arg1)},$arg2"
+        //[-,arg1,arg2,result]
+            op == '-'.toInt()
+                    && arg1 is Symbol
+                    && arg2 is Symbol ->
+                "sub ${regDistributor.getReg(result)},${regDistributor.getReg(arg1)},${regDistributor.getReg(arg2)}"
+
+        //[-,arg1,arg2(int),result]
+            op == '-'.toInt()
+                    && arg1 is Symbol
+                    && arg2 is Int ->
+                "subi ${regDistributor.getReg(result)},${regDistributor.getReg(arg1)},$arg2"
         //[*,arg1,arg2,result]
             op == '*'.toInt()
                     && arg1 is Symbol
@@ -163,6 +174,22 @@ class AsmFile(private var generator: CodeGenerator) {
                 """
                     mult ${regDistributor.getReg(arg1)},${regDistributor.getReg(arg2)}
                             mflo ${regDistributor.getReg(result)}
+                """.trimIndent()
+        //[/,arg1,arg2,result]
+            op == '/'.toInt()
+                    && arg1 is Symbol
+                    && arg2 is Symbol ->
+                """
+                    div ${regDistributor.getReg(arg1)},${regDistributor.getReg(arg2)}
+                            mflo ${regDistributor.getReg(result)}
+                """.trimIndent()
+        //[%,arg1,arg2,result]
+            op == '%'.toInt()
+                    && arg1 is Symbol
+                    && arg2 is Symbol ->
+                """
+                    div ${regDistributor.getReg(arg1)},${regDistributor.getReg(arg2)}
+                            mfhi ${regDistributor.getReg(result)}
                 """.trimIndent()
         //[=,arg1,null,result]
             op == '='.toInt()
