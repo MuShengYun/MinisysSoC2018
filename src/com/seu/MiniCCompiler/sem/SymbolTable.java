@@ -51,20 +51,12 @@ public class SymbolTable {
             if (symbol.name.equals(name))
                 return true;
         }
-        for (Symbol symbol : tempList) {
-            if (symbol.name.equals(name))
-                return true;
-        }
         return false;
     }
 
 
     public Symbol get(String name) {
         for (Symbol symbol : symbolList) {
-            if (symbol.name.equals(name))
-                return symbol;
-        }
-        for (Symbol symbol : tempList) {
             if (symbol.name.equals(name))
                 return symbol;
         }

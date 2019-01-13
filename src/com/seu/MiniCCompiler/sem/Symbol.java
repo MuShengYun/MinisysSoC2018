@@ -85,6 +85,12 @@ public class Symbol {
         return "";
     }
 
+    public int size() {
+        if (type == Tag.TYPE_INT)
+            return 4;
+        return 0;
+    }
+
 
     @Override
     public String toString() {

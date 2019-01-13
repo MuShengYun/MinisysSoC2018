@@ -27,7 +27,7 @@ public class ParserTest {
     @Test
     public void generate() {
         try {
-            Lexer lexer = new Lexer("resource/compilerTest.cpp");
+            Lexer lexer = new Lexer("resource/compilerTest.c");
             Parser parser = new Parser(lexer);
             parser.yyparse();
             System.out.println(parser.generate());

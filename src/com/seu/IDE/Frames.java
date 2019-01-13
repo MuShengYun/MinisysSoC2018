@@ -3,14 +3,15 @@ package com.seu.IDE;
  *以下工程为MinisysSoC2018
  */
 
+import com.seu.MiniCCompiler.MCCApp;
+import com.seu.Minisys32Assembler.ASMApp;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
+import java.awt.event.*;
 import java.io.*;
 import java.util.ArrayList;
+
 
 public class Frames extends JFrame implements ActionListener {//主类是继承了JFrame
     String[][] menuNameMnemonics = {{"File", "f"}, {"Edit", "e"},
@@ -19,9 +20,9 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
     private File file = null;
     JMenuBar menuBar;
     JPanel mainpanel;//这是主的界面（每次new都是生成一个新界面来添加组件）
-    //JPanel jpforEdit;
-    Font textfont = new Font("宋体", Font.BOLD, 30);
-    ImageIcon icon_close = new ImageIcon("C:/Users/qqq/Desktop/fgo/close2.png");//这个是图片要重新设置位置
+
+    Font textfont = new Font("宋体", Font.BOLD, 20);
+    ImageIcon icon_close = new ImageIcon("");
     Box box = null;//用于存储打开的page的切换button
     ArrayList<JButton> listforbuttons = new ArrayList();//切换按钮的数组
     ArrayList<JButton> listforcloses = new ArrayList();//关闭按钮的数组
@@ -111,7 +112,7 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
 
         JMenuItem assemble = createMenuItem("Assemble", null, null, null);
         runMenu.add(assemble);
-        compile.addActionListener(this);
+        assemble.addActionListener(this);
 
         /*
          * 以下为mainpanel的设计
@@ -126,7 +127,7 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
 
         this.setTitle("MinisysSoC2018IDE");       // 标题
         this.setSize(getPreferredSize().width, 200);      // 大小
-        this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);       // 关闭方式
+        this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);       // 关闭方式(此处为假的关闭，真正的关闭监听在下面)
         this.setLocationRelativeTo(null);
         Container container = this.getContentPane();         // 获取一个容器
         mainpanel.setBackground(Color.BLACK);
@@ -136,6 +137,23 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
         mainpanel.updateUI();
         this.setContentPane(mainpanel);
         this.setVisible(true);        // 可视化
+        addWindowListener(new WindowAdapter() {//关闭监听
+            public void windowClosing(WindowEvent e) {
+                int i = JOptionPane.showConfirmDialog(null, "Are you sure to exit？", "Exit", JOptionPane.YES_NO_OPTION);
+                if (i == JOptionPane.YES_OPTION) {
+                    for (int k = 0; i < listforEdits.size(); i++)//循环Edit的ArrayList来关闭各个窗口
+                    {
+                        if (listforEdits.get(k).isChanged) {
+                            int n = confirmDialog();
+                            if (n == 0) {
+                                save();
+                            }
+                        }
+                    }
+                    System.exit(0);
+                }
+            }
+        });
 
     }
 
@@ -225,25 +243,22 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
             FileInputStream in = new FileInputStream(file);
             in.read(filecontent);
             in.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
         return new String(filecontent);
     }
 
-    public void read() {
+    public void open() {
         /*
          *这里是Open file调用的用于打开文件并创建新界面的函数
          */
 
-        JFileChooser jfc = new JFileChooser();
+        JFileChooser jfc = new JFileChooser(new File(System.getProperty("user.dir")));
         jfc.showOpenDialog(jfc);
         file = jfc.getSelectedFile();
 
         if (file != null) {
-
 
             String str = readToString(file);
 
@@ -289,7 +304,6 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
                                 listforEdits.get(on_window).setVisible(false);
                                 listforOutputRolls.get(on_window).setVisible(false);
                                 listforOutputs.get(on_window).setVisible(false);
-                                //System.out.println(on_window);//用于检测关闭是否正确
                             }
 
                             for (int j = 0; j < listforbuttons.size(); j++) {
@@ -302,7 +316,6 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
 
                                 }
                             }
-                            //System.out.println(on_window);//用于检测Button是否相应
                             mainpanel.revalidate();
                         }
 
@@ -317,47 +330,43 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
             close.setPreferredSize(new Dimension(25, 25));
             close.setIcon(icon_close);
             close.addActionListener(
-                    new ActionListener() {
-                        public void actionPerformed(ActionEvent e) {
-
-                            for (int j = 0; j < listforcloses.size(); j++) {
-                                if (e.getSource() == listforcloses.get(j)) {
-                                    on_window = j;
-                                }
+                    e -> {
+                        comfirmSave();
+                        for (int j = 0; j < listforcloses.size(); j++) {
+                            if (e.getSource() == listforcloses.get(j)) {
+                                on_window = j;
                             }
-
-                            //先删除该删除的组件
-                            mainpanel.remove(listforRolls.get(on_window));
-                            mainpanel.remove(listforEdits.get(on_window));
-                            mainpanel.remove(listforOutputRolls.get(on_window));
-                            mainpanel.remove(listforOutputs.get(on_window));
-                            box.remove(on_window);
-                            //System.out.println("close1  "+on_window);
-                            listforEdits.remove(on_window);
-                            listforRolls.remove(on_window);
-                            listforbuttons.remove(on_window);
-                            listforcloses.remove(on_window);
-                            listforOutputRolls.remove(on_window);
-                            listforOutputs.remove(on_window);
-                            if (listforbuttons.size() == 0) {
-                                on_window = -1;
-                            }
-
-                            if (on_window == listforbuttons.size()) {
-                                on_window--;
-                            }
-                            //System.out.println("close2  "+on_window);
-                            if (on_window != -1) {
-                                listforRolls.get(on_window).setVisible(true);
-                                listforEdits.get(on_window).setVisible(true);
-                                listforOutputRolls.get(on_window).setVisible(true);
-                                listforOutputs.get(on_window).setVisible(true);
-                            }
-
-                            mainpanel.updateUI();
-                            mainpanel.repaint();
-                            mainpanel.revalidate();
                         }
+
+                        //先删除该删除的组件
+                        mainpanel.remove(listforRolls.get(on_window));
+                        mainpanel.remove(listforEdits.get(on_window));
+                        mainpanel.remove(listforOutputRolls.get(on_window));
+                        mainpanel.remove(listforOutputs.get(on_window));
+                        box.remove(on_window);
+                        listforEdits.remove(on_window);
+                        listforRolls.remove(on_window);
+                        listforbuttons.remove(on_window);
+                        listforcloses.remove(on_window);
+                        listforOutputRolls.remove(on_window);
+                        listforOutputs.remove(on_window);
+                        if (listforbuttons.size() == 0) {
+                            on_window = -1;
+                        }
+
+                        if (on_window == listforbuttons.size()) {
+                            on_window--;
+                        }
+                        if (on_window != -1) {
+                            listforRolls.get(on_window).setVisible(true);
+                            listforEdits.get(on_window).setVisible(true);
+                            listforOutputRolls.get(on_window).setVisible(true);
+                            listforOutputs.get(on_window).setVisible(true);
+                        }
+
+                        mainpanel.updateUI();
+                        mainpanel.repaint();
+                        mainpanel.revalidate();
                     }
             );
 
@@ -396,18 +405,15 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
                         i++;
                     }
                 }
-
-            } catch (FileNotFoundException e) {
-                System.out.println("打开文件失败");
             } catch (IOException e) {
-                System.out.println("打开文件失败");
+                setOutput("打开文件失败");
             }
 
 
             mainpanel.revalidate();
 
         }
-
+        listforEdits.get(on_window).setFile(file);
     }
 
     public void save() {
@@ -415,17 +421,8 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
          *保存文件调用的函数
          */
         if (file == null) {
-            JFileChooser jfc = new JFileChooser();
-            jfc.showSaveDialog(jfc);
-            file = jfc.getSelectedFile();
-            if (file != null) {
-                try {
-                    file.createNewFile();
-                } catch (IOException e) {
-                    //TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
+            reSave();
+            return;
         }
         OutputStreamWriter out = null;
         if (file != null) {
@@ -442,13 +439,14 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
             }
 
         }
+        listforEdits.get(on_window).setFile(file);
     }
 
-    public void resave() {
+    public void reSave() {
         /*
          *另存为文件调用的函数，实质上和save()一样
          */
-        JFileChooser jfc = new JFileChooser();
+        JFileChooser jfc = new JFileChooser(new File(System.getProperty("user.dir")));
         jfc.showSaveDialog(jfc);
         file = jfc.getSelectedFile();
         if (file != null) {
@@ -474,6 +472,35 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
             }
 
         }
+        listforEdits.get(on_window).setFile(file);
+    }
+
+    public int confirmDialog() {
+        /*
+         * 关闭时调用出确认对话框
+         */
+        int n = JOptionPane.showConfirmDialog(null, "Do you want to save your change?", "Warning", JOptionPane.YES_NO_OPTION);
+        return n;
+
+    }
+
+    public void comfirmSave() {
+        /*
+         * 关闭时要调用的确认函数
+         */
+        if (listforEdits.get(on_window).isChanged) {
+            int n = confirmDialog();
+            if (n == 0) {
+                save();
+                listforEdits.get(on_window).isChanged = false;
+            }
+        }
+    }
+
+    public void setOutput(String text) {    /*
+     * 设置当前window的output的输出内容的函数
+     */
+        listforOutputs.get(on_window).setText(text);
     }
 
     public void New() {
@@ -519,7 +546,6 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
                             listforEdits.get(on_window).setVisible(false);
                             listforOutputRolls.get(on_window).setVisible(false);
                             listforOutputs.get(on_window).setVisible(false);
-                            //System.out.println("button1  "+on_window);//用于检测关闭是否正确
                         }
 
                         for (int j = 0; j < listforbuttons.size(); j++) {
@@ -531,7 +557,6 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
                                 listforOutputs.get(on_window).setVisible(true);
                             }
                         }
-                        //System.out.println("button2  "+on_window);//用于检测Button是否相应
                         mainpanel.revalidate();
                     }
 
@@ -549,7 +574,7 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
         close.addActionListener(
                 new ActionListener() {
                     public void actionPerformed(ActionEvent e) {
-
+                        comfirmSave();
                         for (int j = 0; j < listforcloses.size(); j++) {
                             if (e.getSource() == listforcloses.get(j)) {
                                 on_window = j;
@@ -562,7 +587,6 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
                         mainpanel.remove(listforOutputRolls.get(on_window));
                         mainpanel.remove(listforOutputs.get(on_window));
                         box.remove(on_window);
-                        //System.out.println("close1  "+on_window);
                         listforEdits.remove(on_window);
                         listforbuttons.remove(on_window);
                         listforcloses.remove(on_window);
@@ -577,7 +601,6 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
                         if (on_window == listforbuttons.size()) {
                             on_window--;
                         }
-                        //System.out.println("close2  "+on_window);
                         if (on_window != -1) {
                             listforRolls.get(on_window).setVisible(true);
                             listforEdits.get(on_window).setVisible(true);
@@ -631,26 +654,46 @@ public class Frames extends JFrame implements ActionListener {//主类是继承�
             New();
         }
         if (e.getActionCommand().equals("Open File")) {
-            read();
+            open();
         }
         if (e.getActionCommand().equals("Save")) {
             save();
         }
         if (e.getActionCommand().equals("Save As")) {
-            resave();
+            reSave();
         }
         if (e.getActionCommand().equals("Compile")) {
             //这里调用编译函数
+            if (!listforEdits.get(on_window).file.getName().toLowerCase().endsWith(".c")) {
+                setOutput("当前文件不是c文件！");
+            } else {
+                try {
+                    MCCApp.run(listforEdits.get(on_window).file);
+                    setOutput("编译成功！");
+                } catch (Exception e1) {
+                    setOutput(e1.getMessage());
+                }
+            }
         }
         if (e.getActionCommand().equals("Assemble")) {
+            comfirmSave();
             //这里调用汇编函数
+            if (!listforEdits.get(on_window).file.getName().toLowerCase().endsWith(".asm")) {
+                setOutput("当前文件不是汇编文件！");
+            } else {
+                try {
+                    ASMApp.run(listforEdits.get(on_window).file);
+                    setOutput("编译成功！");
+                } catch (Exception e1) {
+                    setOutput(e1.getMessage());
+                }
+            }
         }
     }
 
 
     public static void main(String[] args) {
-        Frames frame = new Frames();
+        Frames frames = new Frames();
     }
-
 
 }

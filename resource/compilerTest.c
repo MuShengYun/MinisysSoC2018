@@ -1,5 +1,12 @@
 int i;
 int j;
+
+void test(int m)
+{
+    int s;
+    m = 0;
+}
+
 void main(void)
 {
     int k;

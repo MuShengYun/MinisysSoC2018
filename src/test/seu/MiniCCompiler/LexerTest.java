@@ -11,7 +11,7 @@ public class LexerTest {
     public void yylex() {
         try {
             int ID;
-            Lexer  lexer = new Lexer("resource/compilerTest.cpp");
+            Lexer  lexer = new Lexer("resource/compilerTest.c");
             while ((ID =  lexer.yylex()) >= 0)
             {
                 System.out.println(lexer.yytext.toString() + "\tID:" + ID +"\n");

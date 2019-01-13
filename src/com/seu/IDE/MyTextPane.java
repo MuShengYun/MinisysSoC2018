@@ -6,18 +6,25 @@ import javax.swing.text.rtf.RTFEditorKit;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.io.File;
 import java.util.StringTokenizer;
-
 
 public class MyTextPane extends JTextPane {
 
     protected StyleContext m_context;
     protected DefaultStyledDocument m_doc;
-    private   MutableAttributeSet keyAttr,normalAttr;
-    private   MutableAttributeSet inputAttributes =
+    private MutableAttributeSet keyAttr, normalAttr;
+    private MutableAttributeSet inputAttributes =
             new RTFEditorKit().getInputAttributes();
+    protected boolean isChanged = false;//实时监听是否有所修改
+    protected File file = null;//Edit绑定的File
 
-    private String[] keyWord={"int","float","Class"};
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+
+    private String[] keyWord = {"int", "float", "Class"};
 
     public MyTextPane() {
         super();
@@ -31,46 +38,43 @@ public class MyTextPane extends JTextPane {
             }
         });
 
-//定义关键字显示属性
+        //定义关键字显示属性
         keyAttr = new SimpleAttributeSet();
         StyleConstants.setForeground(keyAttr, Color.PINK);
 
-//定义一般文本显示属性
+        //定义一般文本显示属性
         normalAttr = new SimpleAttributeSet();
         StyleConstants.setForeground(normalAttr, Color.WHITE);
     }
-    public void ScanText(int line)
-    {
+
+    public void ScanText(int line) {
         try {
             String s = null;
             Element root = m_doc.getDefaultRootElement();
 
 
-            //System.out.println(cursorPos);
-            //System.out.println(line);
             Element para = root.getElement(line);
             int start = para.getStartOffset();
             int end = para.getEndOffset() - 1;
             s = m_doc.getText(start, end - start);
-            System.out.println(s);
             int i = 0;
-            int xStart = 0;
+            int xStart;
 
             //分析关键字---
-            m_doc.setCharacterAttributes(start, s.length(),normalAttr, false);
+            m_doc.setCharacterAttributes(start, s.length(), normalAttr, false);
             MyStringTokenizer st = new MyStringTokenizer(s);
-            while( st.hasMoreTokens()) {
+            while (st.hasMoreTokens()) {
                 s = st.nextToken();
-                if ( s == null) return;
-                for (i = 0; i < keyWord.length; i++ ) {
+                if (s == null) return;
+                for (i = 0; i < keyWord.length; i++) {
                     if (s.equals(keyWord[i])) break;
                 }
-                if ( i >= keyWord.length ) continue;
+                if (i >= keyWord.length) continue;
 
                 xStart = st.getCurrPosition();
 
                 //设置关键字显示属性
-                m_doc.setCharacterAttributes(start+xStart, s.length(),
+                m_doc.setCharacterAttributes(start + xStart, s.length(),
                         keyAttr, false);
             }
             inputAttributes.addAttributes(normalAttr);
@@ -80,10 +84,10 @@ public class MyTextPane extends JTextPane {
     }
 
 
-
     public void syntaxParse() {
         try {
-            String s = null;
+            isChanged = true;
+            String s;
             Element root = m_doc.getDefaultRootElement();
 
             int cursorPos = this.getCaretPosition();
@@ -94,24 +98,24 @@ public class MyTextPane extends JTextPane {
             int end = para.getEndOffset() - 1;
             s = m_doc.getText(start, end - start);
 
-            int i = 0;
-            int xStart = 0;
+            int i;
+            int xStart;
 
-//分析关键字---
-            m_doc.setCharacterAttributes(start, s.length(),normalAttr, false);
+            //分析关键字---
+            m_doc.setCharacterAttributes(start, s.length(), normalAttr, false);
             MyStringTokenizer st = new MyStringTokenizer(s);
-            while( st.hasMoreTokens()) {
+            while (st.hasMoreTokens()) {
                 s = st.nextToken();
-                if ( s == null) return;
-                for (i = 0; i < keyWord.length; i++ ) {
+                if (s == null) return;
+                for (i = 0; i < keyWord.length; i++) {
                     if (s.equals(keyWord[i])) break;
                 }
-                if ( i >= keyWord.length ) continue;
+                if (i >= keyWord.length) continue;
 
                 xStart = st.getCurrPosition();
 
                 //设置关键字显示属性
-                m_doc.setCharacterAttributes(start+xStart, s.length(),
+                m_doc.setCharacterAttributes(start + xStart, s.length(),
                         keyAttr, false);
             }
             inputAttributes.addAttributes(normalAttr);
@@ -124,12 +128,13 @@ public class MyTextPane extends JTextPane {
 /*在分析字符串的同时，记录每个token所在的位置
  *
  */
-class MyStringTokenizer extends StringTokenizer{
+class MyStringTokenizer extends StringTokenizer {
     String sval = " ";
-    String oldStr,str;
-    int m_currPosition = 0,m_beginPosition=0;
+    String oldStr, str;
+    int m_currPosition = 0, m_beginPosition = 0;
+
     MyStringTokenizer(String str) {
-        super(str," ");
+        super(str, " ");
         this.oldStr = str;
         this.str = str;
     }
@@ -137,16 +142,16 @@ class MyStringTokenizer extends StringTokenizer{
     public String nextToken() {
         try {
             String s = super.nextToken();
-            int pos = -1;
+            int pos;
 
             if (oldStr.equals(s)) {
                 return s;
             }
 
             pos = str.indexOf(s + sval);
-            if ( pos == -1) {
+            if (pos == -1) {
                 pos = str.indexOf(sval + s);
-                if ( pos == -1)
+                if (pos == -1)
                     return null;
                 else pos += 1;
             }

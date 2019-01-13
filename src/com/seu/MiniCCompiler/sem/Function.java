@@ -25,28 +25,28 @@ public class Function {
         return "";
     }
 
-    /**
-     * 获取局部变量
-     *
-     * @return 局部变量的向量
-     */
-    public Vector<Symbol> getLocals() {
-        Vector<Symbol> locals = new Vector<>();
-        locals.addAll(symbolTable.symbolList);
-        if (symbolTable.tempList.size() > 10)
-            locals.addAll(symbolTable.tempList.subList(10, symbolTable.tempList.size()));
-        return locals;
+    public int getRetSize() {
+        if (retType == Tag.TYPE_INT)
+            return 4;
+        if (retType == Tag.TYPE_VOID)
+            return 0;
+        return 0;
     }
 
-    /**
-     * 获取局部临时变量，至多为十个
-     *
-     * @return 局部临时变量的向量
-     */
-    public Vector<Symbol> getTemps() {
-        if (symbolTable.tempList.size() > 10)
-            return (Vector<Symbol>) symbolTable.symbolList.subList(0, 10);
-        else return symbolTable.tempList;
+    public boolean isTemp(Symbol symbol) {
+        return symbolTable.tempList.contains(symbol);
+    }
+
+    public boolean isLocal(Symbol symbol) {
+        return symbolTable.symbolList.contains(symbol);
+    }
+
+    public boolean isGlobal(Symbol symbol) {
+        for (int i = symbolTable.env.size() - 1; i >= 0; i--) {
+            if (symbolTable.env.get(i).symbolList.contains(symbol))
+                return i == 0;
+        }
+        return false;
     }
 
     /**

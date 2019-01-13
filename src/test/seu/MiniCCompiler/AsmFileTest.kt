@@ -5,6 +5,7 @@ import com.seu.MiniCCompiler.Parser
 import com.seu.MiniCCompiler.gen.AsmFile
 import com.seu.MiniCCompiler.gen.CodeGenerator
 import org.junit.BeforeClass
+import org.junit.Ignore
 import org.junit.Test
 
 class AsmFileTest {
@@ -15,13 +16,14 @@ class AsmFileTest {
         @BeforeClass
         @JvmStatic
         fun constructor() {
-            val lexer = Lexer("resource/compilerTest.cpp")
+            val lexer = Lexer("resource/compilerTest.c")
             val parser = Parser(lexer)
             parser.yyparse()
             asmFile = AsmFile(parser.generator)
         }
     }
 
+    @Ignore
     @Test
     fun writeFile() {
         asmFile.writeFile("target/main.asm")
