@@ -9,4 +9,4 @@ start:  addi    $t0, $Zero, 0 		 # 程序的第一条指令必
         add   	$v0, $v0, $v1      	# $v0=$v0+$v1=550055FF
         addi  	$t0, $t0, 4		# $t0=$t0+1
         sw     	$v0, buf($t0)   	# buf[8]=550055FF
-        j   	start
+        j   	star

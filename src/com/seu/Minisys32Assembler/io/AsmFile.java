@@ -20,6 +20,7 @@ public class AsmFile {
 
     private BufferedReader reader;
     private int lineCount = 0;
+    public Vector<String> errors = new Vector<>();
 
     /*Data*/
     public DirectorReader directorReader = new DirectorReader();
@@ -43,11 +44,17 @@ public class AsmFile {
      * 进行两次扫描并编译生成机器码
      *
      * @param filePath asm文件路径
-     * @throws Exception 编译错误
+     * @throws Exception 编译异常
      */
     public AsmFile(String filePath) throws Exception {
         reader = new BufferedReader(new FileReader(filePath));
         firstScan();
+        StringBuilder builder = new StringBuilder();
+        for (String error : errors) {
+            builder.append(error).append("\n");
+        }
+        if (!errors.isEmpty())
+            throw new Exception(builder.toString());
         secondScan();
     }
 
@@ -74,7 +81,7 @@ public class AsmFile {
             try {
                 directorReader.initAddr(parseInt(dataBaseAddr));
             } catch (NumberFormatException e) {
-                throw new Exception("Number format error - Unidentified address");
+                asmError("Number format error - Unidentified address");
             }
 
         try {
@@ -92,7 +99,7 @@ public class AsmFile {
                     String memoni = splits[0].trim();
                     dataDef = splits[1].trim();
                     if (memonis.containsKey(memoni))
-                        throw new Exception("Syntax format error - Redefine of memoni" + memoni);
+                        asmError("Syntax format error - Redefine of memoni" + memoni);
                     checkNaming(memoni);
                     memonis.put(memoni, directorReader.readDataDefine(dataDef));
                 } else
@@ -100,7 +107,7 @@ public class AsmFile {
                 line = readLine().trim();
             }
         } catch (IOException e) {
-            throw new Exception("Program format error - Code segment unfounded");
+            asmError("Program format error - Code segment unfounded");
         }
 
         String codeBaseAddr = line.substring(5).trim().split("[ \t]")[0];
@@ -108,7 +115,7 @@ public class AsmFile {
             try {
                 insReader.initAddr(parseInt(codeBaseAddr));
             } catch (NumberFormatException e) {
-                throw new Exception("Number format error - Unidentified address");
+                asmError("Number format error - Unidentified address");
             }
 
         while ((line = readLine()) != null) {
@@ -116,15 +123,15 @@ public class AsmFile {
             //判断本行是否为空或只有注释
             if (ins.isEmpty() || ins.startsWith("#")) continue;
             if (codeLabels.isEmpty() && !ins.contains(":"))
-                throw new Exception("Syntax format error - Need a label for the first instruction");
+                asmError("Syntax format error - Need a label for the first instruction");
             if (ins.contains(":")) {
                 String[] splits = ins.split(":", 2);
                 String label = splits[0].trim();
                 ins = splits[1].trim();
                 if (!ins.matches("[a-zA-Z].*[ \t]+[a-zA-Z0-9_$].*(,[ \t]*[a-zA-Z0-9_$].*)*"))
-                    throw new Exception("InsReader format error - Not match \"op s1,s2,...\"");
+                    asmError("InsReader format error - Not match \"op s1,s2,...\"");
                 if (codeLabels.containsKey(label))
-                    throw new Exception("Syntax format error - Redefine of label" + label);
+                    asmError("Syntax format error - Redefine of label" + label);
                 checkNaming(label);
                 Address currentAddr = insReader.codeAddrDistributor.distributeAddress(4);
                 codeLabels.put(label, currentAddr);
@@ -146,32 +153,38 @@ public class AsmFile {
         for (String ins : instructions) {
             for (String memoni : memonis.keySet()) {
                 if (ins.contains(memoni))
-                    ins = ins.replace(memoni, memonis.get(memoni).toString());
+                    ins = ins.replaceAll("(?<!\\w)" + memoni + "(?!\\w)", memonis.get(memoni).toString());
             }
             for (String label : codeLabels.keySet()) {
                 if (ins.contains(label))
-                    ins = ins.replace(label, codeLabels.get(label).toString());
+                    ins = ins.replaceAll("(?<!\\w)" + label + "(?!\\w)", codeLabels.get(label).toString());
             }
+
+            Address currentAddress = insReader.codeAddrDistributor.distributeAddress(4);
             try {
-                Address currentAddress = insReader.codeAddrDistributor.distributeAddress(4);
                 insReader.transform(ins);
             } catch (Exception e) {
-                e.printStackTrace();
+                throw new Exception("Inner error of instruction:" + e.getMessage());
             }
+
         }
 
     }
 
     private String readLine() throws IOException {
-        lineCount ++;
+        lineCount++;
         return reader.readLine();
+    }
+
+    private void asmError(String s) {
+        errors.add("Error at line" + lineCount + ":" + s);
     }
 
     private void checkNaming(String symbol) throws Exception {
         if (!symbol.matches("[a-zA-Z][a-zA-Z0-9$_.]{0,7}"))
-            throw new Exception("Lex format error - Nonstandard naming of " + symbol);
+            asmError("Lex format error - Nonstandard naming of " + symbol);
         if (reserveWords.contains(symbol))
-            throw new Exception("Syntax format error - Reserved word used as a symbol" + symbol);
+            asmError("Syntax format error - Reserved word used as a symbol" + symbol);
     }
 
     private int parseInt(String s) {

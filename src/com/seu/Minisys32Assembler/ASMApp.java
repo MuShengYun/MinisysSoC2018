@@ -3,6 +3,8 @@ package com.seu.Minisys32Assembler;
 import com.seu.Minisys32Assembler.io.AsmFile;
 import com.seu.Minisys32Assembler.io.CoeFile;
 
+import java.io.File;
+
 public class ASMApp {
 
     public static void main(String[] args) {
@@ -20,4 +22,9 @@ public class ASMApp {
         }
     }
 
+    public static void run(File file) throws Exception {
+        AsmFile asmFile = new AsmFile(file.getPath());
+        CoeFile coeFile = new CoeFile(asmFile);
+        coeFile.writeFiles(file.getParent() + '/');
+    }
 }
