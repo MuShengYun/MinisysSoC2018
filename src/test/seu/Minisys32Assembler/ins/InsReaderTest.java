@@ -76,8 +76,8 @@ public class InsReaderTest {
         instructions.add("sltiu $a1,$a0,0x0A");
         instructions.add("jal 1024");
 
-        instructions.add("push $7");
-        instructions.add("pop $7");
+        //instructions.add("push $7");
+        //instructions.add("pop $7");
         instructions.add("jg $2,$3,0xffff");
 
         Vector<String> fact = new Vector<>();
@@ -163,8 +163,8 @@ public class InsReaderTest {
         expect.add("00001100000000000000000100000000");//jal 1024
 
         try {
-        expect.add(insReader.transform("sw $7,0($sp)") +insReader.transform("addi $sp,$sp,4"));
-        expect.add(insReader.transform("addi $sp,$sp,-4")+insReader.transform("lw $7,0($sp)"));
+        //expect.add(insReader.transform("sw $7,0($sp)") +insReader.transform("addi $sp,$sp,4"));
+        //expect.add(insReader.transform("addi $sp,$sp,-4")+insReader.transform("lw $7,0($sp)"));
         expect.add(insReader.transform("slt $1,$3,$2")+insReader.transform("bne $1,$0,-1"));
 
             for (String instruction : instructions) {
