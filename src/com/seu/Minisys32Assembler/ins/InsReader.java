@@ -183,7 +183,7 @@ public class InsReader {
             throw new Exception("Internal logic error - Unhandled InsReader problem");
 
         for (int i = 0; i < code.length() / Byte.SIZE; i++) {
-            int byt = Integer.parseInt(code.substring(8 * i, 8 * i + 8));
+            int byt = Integer.parseUnsignedInt(code.substring(8 * i, 8 * i + 8),2);
             insBytes.add((byte) byt);
         }
         return code.toString();
